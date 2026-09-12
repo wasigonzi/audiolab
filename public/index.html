@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>audiolab</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfbf9;
+        --fg: #1b1b1a;
+        --muted: #6b6b66;
+        --line: #e2e2dc;
+        --accent: #2f6f4f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16161a;
+          --fg: #ecece8;
+          --muted: #9b9b95;
+          --line: #2e2e34;
+          --accent: #7fc7a0;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 16px 64px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 640px; margin: 0 auto; }
+      h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
+      p.sub { margin: 0 0 28px; color: var(--muted); }
+      form, section { border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 20px; }
+      h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 14px; }
+      input[type="file"] { width: 100%; margin-bottom: 14px; }
+      button {
+        font: inherit; font-weight: 550; color: #fff; background: var(--accent);
+        border: 0; border-radius: 7px; padding: 8px 16px; cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: progress; }
+      .status { margin-top: 12px; color: var(--muted); font-size: 13px; min-height: 1.2em; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li { padding: 12px 0; border-top: 1px solid var(--line); }
+      li:first-child { border-top: 0; }
+      .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; word-break: break-all; }
+      audio { width: 100%; }
+      .empty { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>audiolab</h1>
+      <p class="sub">Servidor de pruebas para subir y reproducir audio.</p>
+
+      <form id="upload">
+        <h2>Subir audio</h2>
+        <input type="file" name="file" accept="audio/*" required />
+        <button type="submit">Subir</button>
+        <div class="status" id="status"></div>
+      </form>
+
+      <section>
+        <h2>Archivos</h2>
+        <ul id="list"><li class="empty">Cargando…</li></ul>
+      </section>
+    </main>
+
+    <script type="module">
+      const form = document.getElementById('upload');
+      const statusEl = document.getElementById('status');
+      const list = document.getElementById('list');
+
+      const kb = (bytes) =>
+        bytes >= 1024 * 1024
+          ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+          : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+
+      async function refresh() {
+        try {
+          const res = await fetch('/api/audio');
+          const { items } = await res.json();
+          list.innerHTML = '';
+          if (!items.length) {
+            list.innerHTML = '<li class="empty">Todavía no hay audios.</li>';
+            return;
+          }
+          for (const item of items) {
+            const li = document.createElement('li');
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = `${item.id} · ${kb(item.sizeBytes)} · ${new Date(item.uploadedAt).toLocaleString()}`;
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = item.url;
+            li.append(meta, audio);
+            list.append(li);
+          }
+        } catch {
+          list.innerHTML = '<li class="empty">No se pudo cargar la lista.</li>';
+        }
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = form.querySelector('button');
+        button.disabled = true;
+        statusEl.textContent = 'Subiendo…';
+        try {
+          const res = await fetch('/api/audio', { method: 'POST', body: new FormData(form) });
+          const body = await res.json().catch(() => ({}));
+          statusEl.textContent = res.ok ? 'Listo.' : `Error: ${body.error ?? res.status}`;
+          if (res.ok) {
+            form.reset();
+            await refresh();
+          }
+        } catch (err) {
+          statusEl.textContent = `Error de red: ${err.message}`;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      refresh();
+    </script>
+  </body>
+</html>
