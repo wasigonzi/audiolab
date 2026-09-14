@@ -1,0 +1,11 @@
+# Texturas: deterministas, se regeneran con tools/textures.py
+textures/
+
+# Salidas pesadas y reconstruibles
+exports/*.blend
+exports/*.blend1
+exports/guancha_web.glb
+viewer/standalone.html
+
+__pycache__/
+*.pyc

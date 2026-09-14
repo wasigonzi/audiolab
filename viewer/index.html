@@ -1,0 +1,516 @@
+<title>Faro de La Guancha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,400;0,700;0,900;1,400&family=Chivo+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ---- Paleta: piedra coralina, celeste de la bandera, verde de la cubierta ---- */
+  :root {
+    --stone:      #EDE6D8;
+    --stone-deep: #DDD2BE;
+    --ink:        #16262B;
+    --ink-soft:   #4A5C60;
+    --celeste:    #12879B;
+    --coral:      #C4405A;
+    --moss:       #2E7A4E;
+
+    --bg:         var(--stone);
+    --panel:      #F7F3EA;
+    --edge:       #CBBFA8;
+    --fg:         var(--ink);
+    --fg-dim:     var(--ink-soft);
+    --accent:     var(--celeste);
+    --sky-top:    #BFE3EA;
+    --sky-bot:    #E9E2D2;
+    --shadow:     0 1px 2px rgba(22, 38, 43, .10), 0 8px 24px -12px rgba(22, 38, 43, .22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:       #0C1417;
+      --panel:    #142026;
+      --edge:     #2B3E45;
+      --fg:       #E6EDEB;
+      --fg-dim:   #8FA5A8;
+      --accent:   #3FC5D8;
+      --coral:    #E4657C;
+      --moss:     #49A473;
+      --sky-top:  #12333C;
+      --sky-bot:  #0C1417;
+      --shadow:   0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:       #0C1417;
+    --panel:    #142026;
+    --edge:     #2B3E45;
+    --fg:       #E6EDEB;
+    --fg-dim:   #8FA5A8;
+    --accent:   #3FC5D8;
+    --coral:    #E4657C;
+    --moss:     #49A473;
+    --sky-top:  #12333C;
+    --sky-bot:  #0C1417;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 15px/1.55 "Chivo", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "Chivo Mono", ui-monospace, "SFMono-Regular", monospace; }
+
+  /* ---------------- Lamina ---------------- */
+  .sheet {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 274px;
+    gap: 14px;
+    padding: 14px 16px;
+    padding-block: 14px;
+    min-height: 100svh;
+    align-content: start;
+  }
+  @media (max-width: 860px) {
+    .sheet { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .plate {
+    position: relative;
+    border: 1px solid var(--edge);
+    border-radius: 3px;
+    overflow: hidden;
+    background: linear-gradient(175deg, var(--sky-top), var(--sky-bot));
+    min-height: 62svh;
+    aspect-ratio: 4 / 5;
+    max-height: calc(100svh - 28px);
+  }
+  @media (min-width: 861px) { .plate { aspect-ratio: auto; height: calc(100svh - 28px); } }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  /* ---------------- Cartela (title block) ---------------- */
+  .cartouche {
+    position: absolute; left: 12px; bottom: 12px;
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--edge);
+    backdrop-filter: blur(7px);
+    padding: 10px 13px 11px;
+    max-width: min(300px, calc(100% - 24px));
+  }
+  .cartouche h1 {
+    margin: 0;
+    font-weight: 900;
+    font-size: clamp(18px, 2.4vw, 23px);
+    letter-spacing: -.022em;
+    text-wrap: balance;
+    line-height: 1.12;
+  }
+  .cartouche .loc {
+    margin: 3px 0 9px;
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    font-style: italic;
+  }
+  .specs {
+    display: grid; grid-template-columns: auto auto; gap: 2px 16px;
+    font-size: 11px; letter-spacing: .04em;
+    border-top: 1px solid var(--edge); padding-top: 8px;
+  }
+  .specs dt { color: var(--fg-dim); text-transform: uppercase; }
+  .specs dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* ---------------- Cotas proyectadas ---------------- */
+  #datums { position: absolute; inset: 0; pointer-events: none; }
+  .datum { position: absolute; left: 0; top: 0; will-change: transform; }
+  .datum .leader {
+    position: absolute; right: 100%; top: 50%;
+    height: 0; border-top: 1px dashed color-mix(in srgb, var(--fg) 40%, transparent);
+  }
+  .datum .tag {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    transform: translateY(-50%);
+    font-family: "Chivo Mono", ui-monospace, monospace;
+    font-size: 10.5px; letter-spacing: .02em;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--panel) 84%, transparent);
+    border: 1px solid var(--edge);
+    padding: 1px 5px; white-space: nowrap;
+  }
+  .datum .tag b { font-weight: 500; color: var(--coral); font-variant-numeric: tabular-nums; }
+  .datum .tag span { color: var(--fg-dim); }
+
+  /* ---------------- Rail lateral ---------------- */
+  .rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card {
+    border: 1px solid var(--edge);
+    background: var(--panel);
+    border-radius: 3px;
+    padding: 12px 13px 13px;
+  }
+  .card > h2 {
+    margin: 0 0 9px;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: .13em; text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+
+  .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .parts li + li { border-top: 1px solid color-mix(in srgb, var(--edge) 60%, transparent); }
+  .part {
+    width: 100%; display: grid; grid-template-columns: 9px minmax(0,1fr) auto;
+    align-items: center; gap: 9px;
+    background: none; border: 0; padding: 7px 2px;
+    font: inherit; font-size: 13.5px; color: var(--fg);
+    text-align: left; cursor: pointer;
+  }
+  .part:hover { color: var(--accent); }
+  .part:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .part .swatch { width: 9px; height: 9px; border-radius: 1px; background: var(--sw, var(--fg-dim)); }
+  .part .lvl {
+    font-family: "Chivo Mono", ui-monospace, monospace;
+    font-size: 10.5px; color: var(--fg-dim); font-variant-numeric: tabular-nums;
+  }
+  .part[aria-pressed="true"] { color: var(--accent); font-weight: 700; }
+  .part[aria-pressed="true"] .lvl { color: var(--accent); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 7px; }
+  .btn {
+    flex: 1 1 auto;
+    font: inherit; font-size: 12.5px;
+    padding: 7px 11px;
+    border: 1px solid var(--edge); border-radius: 2px;
+    background: transparent; color: var(--fg); cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+
+  .note { font-size: 12px; color: var(--fg-dim); margin: 0; }
+  .note + .note { margin-top: 7px; }
+  .note b { color: var(--fg); font-weight: 700; }
+
+  /* ---------------- Carga ---------------- */
+  #status {
+    position: absolute; inset: 0;
+    display: grid; place-content: center; gap: 10px; justify-items: center;
+    background: linear-gradient(175deg, var(--sky-top), var(--sky-bot));
+    text-align: center; padding: 20px;
+  }
+  #status[hidden] { display: none !important; }
+  #status p { margin: 0; font-size: 13px; color: var(--fg-dim); max-width: 34ch; }
+  .meter { width: 160px; height: 2px; background: var(--edge); overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="sheet">
+  <main class="plate">
+    <canvas id="stage"></canvas>
+    <div id="datums" aria-hidden="true"></div>
+
+    <div class="cartouche">
+      <h1>Faro de La Guancha</h1>
+      <p class="loc">Paseo Tablado La Guancha · Ponce, Puerto&nbsp;Rico</p>
+      <dl class="specs">
+        <dt>Altura</dt><dd>21,58 m</dd>
+        <dt>Planta</dt><dd>5,65 × 5,65 m</dd>
+        <dt>Malla</dt><dd>2 706 caras</dd>
+      </dl>
+    </div>
+
+    <div id="status">
+      <div class="meter"><i id="bar"></i></div>
+      <p id="msg">Cargando el modelo…</p>
+    </div>
+  </main>
+
+  <aside class="rail">
+    <section class="card">
+      <h2>Vista</h2>
+      <div class="controls">
+        <button class="btn" id="spin" aria-pressed="true" type="button">Girar</button>
+        <button class="btn" id="reset" type="button">Encuadre</button>
+        <button class="btn" id="wire" aria-pressed="false" type="button">Malla</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Cuerpos · cota en metros</h2>
+      <ul class="parts" id="parts"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Nota</h2>
+      <p class="note">Reconstrucción paramétrica a partir de una fotografía: la
+        geometría se genera por código en Blender, no se modeló a mano.</p>
+      <p class="note">La bandera va pintada girada 90°, con el izado en el borde
+        superior y las franjas verticales — la estrella, en cambio, recta.</p>
+      <p class="note"><b>Arrastra</b> para orbitar · <b>rueda</b> para acercar.</p>
+    </section>
+  </aside>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const CANDIDATES = ['guancha.glb', '../exports/guancha.glb', 'exports/guancha.glb'];
+
+/* Cuerpos del edificio: nombre visible, objetos del glb, cota y color de guia.
+   Las cotas salen del mismo diccionario de parametros que genera la geometria. */
+const BODIES = [
+  { id: 'zocalo',   name: 'Zócalo de mampostería', z: [0.00, 4.60],   sw: '#A89574',
+    objs: ['Zocalo_Piedra', 'Zocalo_Huecos', 'Cordon_Amarillo'] },
+  { id: 'fuste',    name: 'Fuste con la bandera',  z: [5.02, 13.62],  sw: '#D24A60',
+    objs: ['Fuste_Bandera', 'Fuste_Huecos', 'Rejas'] },
+  { id: 'cornisa',  name: 'Cornisa y canecillos',  z: [13.62, 14.58], sw: '#E8C14A',
+    objs: ['Cornisa_Amarilla', 'Canecillos'] },
+  { id: 'mirador',  name: 'Mirador y barandal',    z: [14.58, 16.02], sw: '#3A4750',
+    objs: ['Losa_Mirador', 'Piso_Mirador', 'Barandal'] },
+  { id: 'templete', name: 'Templete',              z: [14.94, 18.18], sw: '#EFE7D3',
+    objs: ['Columnas', 'Arquitrabe', 'Farol'] },
+  { id: 'cubierta', name: 'Cubierta a cuatro aguas', z: [18.18, 21.58], sw: '#2E7A4E',
+    objs: ['Cubierta', 'Faja_Alero'] },
+  { id: 'sonido',   name: 'Line arrays',           z: [14.94, 20.20], sw: '#17181C',
+    objs: ['Line_Array'] },
+];
+
+const DATUMS = [
+  { z: 0.00,  label: 'arranque' },
+  { z: 4.60,  label: 'cordón' },
+  { z: 13.62, label: 'cornisa' },
+  { z: 14.94, label: 'mirador' },
+  { z: 18.18, label: 'alero' },
+  { z: 21.58, label: 'remate' },
+];
+
+const canvas = document.getElementById('stage');
+const statusEl = document.getElementById('status');
+const msgEl = document.getElementById('msg');
+const barEl = document.getElementById('bar');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 400);
+camera.position.set(26, -28, 19);
+camera.up.set(0, 0, 1);                         // el modelo viene con Z arriba
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.05).texture;
+
+const sun = new THREE.DirectionalLight(0xfff3e2, 2.6);
+sun.position.set(20, -26, 34);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 6;
+sun.shadow.camera.far = 90;
+const S = 18;
+Object.assign(sun.shadow.camera, { left: -S, right: S, top: S, bottom: -S });
+sun.shadow.camera.updateProjectionMatrix();
+sun.shadow.bias = -0.0012;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbfe3ea, 0x6b5f4a, 0.85));
+
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(30, 64),
+  new THREE.ShadowMaterial({ opacity: 0.22 })
+);
+floor.receiveShadow = true;
+scene.add(floor);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.target.set(0, 0, 10.4);
+controls.minDistance = 12;
+controls.maxDistance = 90;
+controls.maxPolarAngle = Math.PI * 0.52;
+controls.autoRotateSpeed = 0.7;
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotate = !reduce;
+
+let model = null;
+const byName = new Map();
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== w * renderer.getPixelRatio() || canvas.height !== h * renderer.getPixelRatio()) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+
+/* ------------------------- carga del glb ------------------------- */
+function load(i = 0) {
+  if (i >= CANDIDATES.length) {
+    msgEl.textContent = 'No se encontró guancha.glb junto a esta página.';
+    barEl.style.width = '100%';
+    barEl.style.background = 'var(--coral)';
+    return;
+  }
+  new GLTFLoader().load(
+    CANDIDATES[i],
+    (gltf) => { onLoaded(gltf.scene); },
+    (e) => { if (e.total) barEl.style.width = (e.loaded / e.total * 100).toFixed(0) + '%'; },
+    () => load(i + 1)
+  );
+}
+
+function onLoaded(root) {
+  model = root;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true;
+    o.receiveShadow = true;
+    o.material = o.material.clone();       // materiales propios: permite aislar
+    o.userData.base = o.material;
+    byName.set(o.name, o);
+  });
+  scene.add(root);
+  statusEl.hidden = true;
+  buildParts();
+}
+
+/* ------------------------- lista de cuerpos ------------------------- */
+let isolated = null;
+
+function meshesOf(body) {
+  return body.objs.map((n) => byName.get(n)).filter(Boolean);
+}
+
+function applyIsolation() {
+  const keep = isolated ? new Set(meshesOf(isolated)) : null;
+  byName.forEach((mesh) => {
+    const dim = keep && !keep.has(mesh);
+    const m = mesh.material;
+    m.transparent = dim;
+    m.opacity = dim ? 0.08 : 1;
+    m.depthWrite = !dim;
+    m.needsUpdate = true;
+  });
+}
+
+function buildParts() {
+  const ul = document.getElementById('parts');
+  BODIES.forEach((body) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'part';
+    b.setAttribute('aria-pressed', 'false');
+    b.style.setProperty('--sw', body.sw);
+    b.innerHTML = `<span class="swatch"></span><span>${body.name}</span>` +
+      `<span class="lvl">${body.z[0].toFixed(2)}–${body.z[1].toFixed(2)}</span>`;
+    b.addEventListener('click', () => {
+      isolated = isolated === body ? null : body;
+      ul.querySelectorAll('.part').forEach((el) =>
+        el.setAttribute('aria-pressed', String(el === b && isolated === body)));
+      applyIsolation();
+    });
+    li.appendChild(b);
+    ul.appendChild(li);
+  });
+}
+
+/* ------------------------- cotas proyectadas ------------------------- */
+const layer = document.getElementById('datums');
+const tags = DATUMS.map((d) => {
+  const el = document.createElement('div');
+  el.className = 'datum';
+  el.innerHTML = `<i class="leader"></i><span class="tag"><b>+${d.z.toFixed(2)}</b><span>${d.label}</span></span>`;
+  layer.appendChild(el);
+  return el;
+});
+
+const v = new THREE.Vector3();
+function placeDatums() {
+  if (!model) return;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const railX = w - 104;
+  let lastY = -1e3;
+  DATUMS.forEach((d, i) => {
+    v.set(0, 0, d.z).project(camera);
+    const sx = (v.x * 0.5 + 0.5) * w;
+    const sy = (-v.y * 0.5 + 0.5) * h;
+    const el = tags[i];
+    // se ocultan las cotas fuera de la lámina o pisadas por la anterior
+    const hidden = v.z > 1 || sy < 14 || sy > h - 74 || Math.abs(sy - lastY) < 21 || railX < sx + 8;
+    el.style.display = hidden ? 'none' : 'block';
+    if (hidden) return;
+    lastY = sy;
+    el.style.transform = `translate(${railX}px, ${sy}px)`;
+    el.firstElementChild.style.width = Math.max(0, railX - sx) + 'px';
+  });
+}
+
+/* ------------------------- controles ------------------------- */
+const spinBtn = document.getElementById('spin');
+spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
+spinBtn.addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate;
+  spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  camera.position.set(26, -28, 19);
+  controls.target.set(0, 0, 10.4);
+  controls.update();
+});
+
+const wireBtn = document.getElementById('wire');
+wireBtn.addEventListener('click', () => {
+  const on = wireBtn.getAttribute('aria-pressed') !== 'true';
+  wireBtn.setAttribute('aria-pressed', String(on));
+  byName.forEach((m) => { m.material.wireframe = on; });
+});
+
+canvas.addEventListener('pointerdown', () => {
+  controls.autoRotate = false;
+  spinBtn.setAttribute('aria-pressed', 'false');
+});
+
+/* ------------------------- bucle ------------------------- */
+renderer.setAnimationLoop(() => {
+  resize();
+  controls.update();
+  renderer.render(scene, camera);
+  placeDatums();
+});
+
+const inlined = document.getElementById('model-b64');
+if (inlined) {
+  // version autocontenida: el glb viaja en la propia página
+  const raw = atob(inlined.textContent.trim());
+  const buf = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+  barEl.style.width = '100%';
+  new GLTFLoader().parse(buf.buffer, '', (g) => onLoaded(g.scene), () => {
+    msgEl.textContent = 'No se pudo interpretar el modelo incrustado.';
+  });
+} else {
+  load();
+}
+</script>

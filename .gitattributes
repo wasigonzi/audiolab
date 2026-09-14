@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Binarios del modelo: nunca normalizar saltos de linea
+*.glb  binary
+*.gltf binary
+*.blend binary
+*.png  binary
+*.jpg  binary
