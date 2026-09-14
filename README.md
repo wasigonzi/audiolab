@@ -36,7 +36,7 @@ amarradas; los **24 kioscos** en dos hileras enfrentadas; el edificio de dos
 plantas con cubierta verde; el anfiteatro al aire libre; la lengua de playa con
 su arbolado, el césped y el aparcamiento.
 
-El conjunto ocupa **194 × 148 m** y suma 23 567 caras en 52 objetos.
+El conjunto ocupa **194 × 148 m** y suma 25 384 caras en 57 objetos.
 
 | Vista | |
 |---|---|
