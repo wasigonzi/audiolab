@@ -28,6 +28,9 @@ def build_web_textures(out_dir):
     textures.stone_textures(os.path.join(out_dir, "stone_base_color.png"),
                             os.path.join(out_dir, "stone_base_normal.png"),
                             size=512, cells=9)
+    textures.deck_planks(os.path.join(out_dir, "deck_planks.png"), size=384, rows=11)
+    textures.concrete(os.path.join(out_dir, "concrete.png"), size=320)
+    textures.sand(os.path.join(out_dir, "sand.png"), size=256)
     total = sum(os.path.getsize(os.path.join(out_dir, f))
                 for f in os.listdir(out_dir))
     print(f"  texturas web: {total // 1024} KB")
@@ -36,13 +39,15 @@ def build_web_textures(out_dir):
 def main():
     import bpy
     import build
+    import build_scene
+    import entorno
 
     web_tex = os.path.join(ROOT, "textures", "web")
     build_web_textures(web_tex)
 
-    build.TEX = web_tex                       # el modelo usa las texturas ligeras
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    build.build_tower()
+    build.TEX = web_tex                       # la escena usa las texturas ligeras
+    entorno.WATER.update(extent=210.0, divisions=44)
+    build_scene.build_scene()
 
     for o in bpy.data.objects:
         o.select_set(True)

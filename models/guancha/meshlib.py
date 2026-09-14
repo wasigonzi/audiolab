@@ -98,21 +98,29 @@ def frustum_face_mapper(w0, w1, h, z0, face):
     return f
 
 
-def add_frustum(mb, w0, w1, h, z0, uv_faces=None, cap_top=False, cap_bottom=False):
+def add_frustum(mb, w0, w1, h, z0, uv_faces=None, cap_top=False, cap_bottom=False,
+                center=(0.0, 0.0)):
     """Tronco de piramide de base cuadrada. `uv_faces[i]` = (u0, u1) en el atlas."""
+    cx, cy = center
+
+    def off(p):
+        return (p[0] + cx, p[1] + cy, p[2])
+
     for face in range(4):
         f = frustum_face_mapper(w0, w1, h, z0, face)
         u0, u1 = uv_faces[face] if uv_faces else (0.0, 1.0)
         mb.add(
-            [f(0, 0), f(1, 0), f(1, 1), f(0, 1)],
+            [off(f(0, 0)), off(f(1, 0)), off(f(1, 1)), off(f(0, 1))],
             [(u0, 0), (u1, 0), (u1, 1), (u0, 1)],
         )
     a0, a1 = w0 / 2.0, w1 / 2.0
     if cap_bottom:
-        mb.add([(-a0, -a0, z0), (-a0, a0, z0), (a0, a0, z0), (a0, -a0, z0)])
+        mb.add([off((-a0, -a0, z0)), off((-a0, a0, z0)),
+                off((a0, a0, z0)), off((a0, -a0, z0))])
     if cap_top:
         z1 = z0 + h
-        mb.add([(-a1, -a1, z1), (a1, -a1, z1), (a1, a1, z1), (-a1, a1, z1)])
+        mb.add([off((-a1, -a1, z1)), off((a1, -a1, z1)),
+                off((a1, a1, z1)), off((-a1, a1, z1))])
 
 
 def add_box(mb, center, size, uv_scale=1.0):
@@ -156,12 +164,22 @@ def add_cylinder(mb, center, r0, r1, h, segments=24, caps=True):
         mb.add(ring1)
 
 
-def add_pyramid(mb, w_base, w_top, h, z0):
-    """Cubierta a cuatro aguas. w_top = 0 da una piramide pura."""
+def add_pyramid(mb, w_base, w_top, h, z0, center=(0.0, 0.0), depth_base=None,
+                depth_top=None):
+    """Cubierta a cuatro aguas. w_top = 0 da una piramide pura.
+
+    `center` desplaza la pieza en planta; `depth_*` permiten una planta
+    rectangular (por defecto, cuadrada).
+    """
+    cx, cy = center
     a, b = w_base / 2.0, w_top / 2.0
+    c = (depth_base if depth_base is not None else w_base) / 2.0
+    dtop = (depth_top if depth_top is not None else w_top) / 2.0
     z1 = z0 + h
-    base = [(-a, -a, z0), (a, -a, z0), (a, a, z0), (-a, a, z0)]
-    top = [(-b, -b, z1), (b, -b, z1), (b, b, z1), (-b, b, z1)]
+    base = [(cx - a, cy - c, z0), (cx + a, cy - c, z0),
+            (cx + a, cy + c, z0), (cx - a, cy + c, z0)]
+    top = [(cx - b, cy - dtop, z1), (cx + b, cy - dtop, z1),
+           (cx + b, cy + dtop, z1), (cx - b, cy + dtop, z1)]
     for i in range(4):
         j = (i + 1) % 4
         if w_top <= 1e-6:

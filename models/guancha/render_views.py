@@ -124,7 +124,9 @@ VIEWS = {
 }
 
 
-def render_all(out_dir, samples=64, res=1100, views=None):
+def render_all(out_dir, samples=64, res=1100, views=None, with_site=True,
+               sun_elevation=38.0, sun_rotation=225.0, prefix="guancha",
+               exposure=-0.45):
     using_cycles = _enable_cycles()
     scene = bpy.context.scene
     if using_cycles:
@@ -141,11 +143,12 @@ def render_all(out_dir, samples=64, res=1100, views=None):
     # AgX apaga demasiado los colores de la bandera; Standard se acerca
     # mucho mas al aspecto saturado de la foto de referencia
     scene.view_settings.view_transform = "Standard"
-    scene.view_settings.exposure = -0.45
+    scene.view_settings.exposure = exposure
     scene.view_settings.look = "None"
 
-    setup_world()
-    setup_site()
+    setup_world(sun_elevation, sun_rotation)
+    if with_site:
+        setup_site()
 
     renders_dir = os.path.join(out_dir, "renders")
     os.makedirs(renders_dir, exist_ok=True)
@@ -157,7 +160,7 @@ def render_all(out_dir, samples=64, res=1100, views=None):
         setup_camera(loc, tgt, lens)
         scene.render.resolution_x = int(res * aw)
         scene.render.resolution_y = int(res * ah)
-        path = os.path.join(renders_dir, f"guancha_{name}.png")
+        path = os.path.join(renders_dir, f"{prefix}_{name}.png")
         scene.render.filepath = path
         bpy.ops.render.render(write_still=True)
         print("[render]", path)

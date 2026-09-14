@@ -86,15 +86,21 @@ def star_points(cx, cy, r_outer, r_inner, rotation=-np.pi / 2):
 
 
 def _value_noise(h, w, cells, seed, octaves=4):
-    """Ruido fractal suave en [0,1] por interpolacion bilineal de una rejilla."""
+    """Ruido fractal suave en [0,1] por interpolacion bilineal de una rejilla.
+
+    `cells` puede ser un entero o la pareja (filas, columnas), que permite
+    estirar el ruido en un eje: asi se consigue la veta de la madera.
+    """
     rng = np.random.default_rng(seed)
     total = np.zeros((h, w), np.float64)
+    cy, cx = cells if isinstance(cells, (tuple, list)) else (cells, cells)
     amp, norm = 1.0, 0.0
     for o in range(octaves):
-        n = max(2, int(cells * (2 ** o)))
-        grid = rng.random((n + 1, n + 1))
-        yi = np.linspace(0, n, h, endpoint=False)
-        xi = np.linspace(0, n, w, endpoint=False)
+        ny = max(2, int(cy * (2 ** o)))
+        nx = max(2, int(cx * (2 ** o)))
+        grid = rng.random((ny + 1, nx + 1))
+        yi = np.linspace(0, ny, h, endpoint=False)
+        xi = np.linspace(0, nx, w, endpoint=False)
         y0, x0 = yi.astype(int), xi.astype(int)
         fy, fx = (yi - y0)[:, None], (xi - x0)[None, :]
         # suavizado smoothstep para evitar el aspecto de rejilla
@@ -246,6 +252,66 @@ def stone_textures(color_path, normal_path, size=1024, cells=13, seed=5):
 
 
 # --------------------------------------------------------------------------
+# Superficies del entorno: tablado, hormigon y arena
+# --------------------------------------------------------------------------
+WOOD_WARM = (150, 92, 58)
+WOOD_GREY = (131, 106, 88)
+
+
+def deck_planks(path, size=1024, rows=15, seed=21):
+    """Entablado del paseo: tablas horizontales, veta, juntas y topes."""
+    rng = np.random.default_rng(seed)
+    h = w = size
+    ys = np.arange(h)[:, None]
+    xs = np.arange(w)[None, :]
+
+    row = (ys * rows) // h                       # indice de tabla
+    frac = (ys * rows) / h - row                 # posicion dentro de la tabla
+
+    warm = np.array(WOOD_WARM, float)
+    grey = np.array(WOOD_GREY, float)
+    # cada tabla se sitúa en algún punto entre la madera cálida y la agrisada
+    mix = rng.random(rows + 1)[row] * np.ones_like(xs)
+    img = warm[None, None, :] + (grey - warm)[None, None, :] * mix[:, :, None]
+
+    # cada tabla, un poco mas clara o mas oscura
+    img *= (0.80 + 0.40 * rng.random(rows + 1)[row])[:, :, None]
+
+    # veta: ruido muy estirado en horizontal
+    grain = _value_noise(h, w, (rows * 7, 3), seed=seed + 1, octaves=3)
+    img *= (0.84 + 0.30 * grain)[:, :, None]
+
+    # juntas entre tablas y topes a tresbolillo
+    joint = np.clip(1.0 - np.minimum(frac, 1 - frac) / 0.045, 0, 1) ** 1.4
+    butt_at = (rng.random(rows + 1)[row] * w).astype(int)
+    butt = (np.abs(xs - butt_at) < 2).astype(float)
+    dark = np.clip(joint + butt, 0, 1)
+    img = img * (1 - dark[:, :, None]) + np.array((46, 33, 26), float) * dark[:, :, None]
+
+    img += rng.normal(0, 4.0, img.shape)
+    return write_png(path, np.clip(img, 0, 255))
+
+
+def concrete(path, size=768, seed=31):
+    rng = np.random.default_rng(seed)
+    base = np.array((176, 172, 163), float)
+    blotch = _value_noise(size, size, 5, seed=seed, octaves=4)
+    fine = _value_noise(size, size, 40, seed=seed + 1, octaves=3)
+    img = base[None, None, :] * (0.80 + 0.26 * blotch + 0.10 * fine)[:, :, None]
+    img += rng.normal(0, 4.5, img.shape)
+    return write_png(path, np.clip(img, 0, 255))
+
+
+def sand(path, size=512, seed=41):
+    rng = np.random.default_rng(seed)
+    base = np.array((222, 205, 172), float)
+    ripple = _value_noise(size, size, (6, 26), seed=seed, octaves=3)
+    img = base[None, None, :] * (0.88 + 0.18 * ripple)[:, :, None]
+    img += rng.normal(0, 5.0, img.shape)
+    return write_png(path, np.clip(img, 0, 255))
+
+
+# --------------------------------------------------------------------------
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     made = [
@@ -254,6 +320,9 @@ def main(out_dir):
             os.path.join(out_dir, "stone_base_color.png"),
             os.path.join(out_dir, "stone_base_normal.png"),
         ),
+        deck_planks(os.path.join(out_dir, "deck_planks.png")),
+        concrete(os.path.join(out_dir, "concrete.png")),
+        sand(os.path.join(out_dir, "sand.png")),
     ]
     for p in made:
         print("  ->", p, os.path.getsize(p) // 1024, "KB")

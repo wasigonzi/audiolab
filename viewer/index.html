@@ -158,6 +158,12 @@
 
   .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
   .parts li + li { border-top: 1px solid color-mix(in srgb, var(--edge) 60%, transparent); }
+  .parts .grp {
+    font-size: 10px; font-weight: 700; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--fg-dim);
+    padding: 11px 2px 4px;
+  }
+  .parts li.grp:first-child { padding-top: 2px; }
   .part {
     width: 100%; display: grid; grid-template-columns: 9px minmax(0,1fr) auto;
     align-items: center; gap: 9px;
@@ -213,11 +219,11 @@
 
     <div class="cartouche">
       <h1>Faro de La Guancha</h1>
-      <p class="loc">Paseo Tablado La Guancha · Ponce, Puerto&nbsp;Rico</p>
+      <p class="loc">Complejo Recreativo y Cultural · Ponce, Puerto&nbsp;Rico</p>
       <dl class="specs">
-        <dt>Altura</dt><dd>21,58 m</dd>
-        <dt>Planta</dt><dd>5,65 × 5,65 m</dd>
-        <dt>Malla</dt><dd>2 706 caras</dd>
+        <dt>Faro</dt><dd>21,58 m</dd>
+        <dt>Ámbito</dt><dd>194 × 148 m</dd>
+        <dt>Malla</dt><dd>23 567 caras</dd>
       </dl>
     </div>
 
@@ -246,6 +252,9 @@
       <h2>Nota</h2>
       <p class="note">Reconstrucción paramétrica a partir de una fotografía: la
         geometría se genera por código en Blender, no se modeló a mano.</p>
+      <p class="note">La planta es una interpretación a escala verosímil, no un
+        levantamiento: las cantidades (24 kioscos, marina, anfiteatro, playa)
+        salen de la documentación del complejo.</p>
       <p class="note">La bandera va pintada girada 90°, con el izado en el borde
         superior y las franjas verticales — la estrella, en cambio, recta.</p>
       <p class="note"><b>Arrastra</b> para orbitar · <b>rueda</b> para acercar.</p>
@@ -268,34 +277,62 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const CANDIDATES = ['guancha.glb', '../exports/guancha.glb', 'exports/guancha.glb'];
+const CANDIDATES = ['guancha_complejo.glb', '../exports/guancha_complejo.glb',
+                    'exports/guancha_complejo.glb'];
 
-/* Cuerpos del edificio: nombre visible, objetos del glb, cota y color de guia.
-   Las cotas salen del mismo diccionario de parametros que genera la geometria. */
-const BODIES = [
-  { id: 'zocalo',   name: 'Zócalo de mampostería', z: [0.00, 4.60],   sw: '#A89574',
-    objs: ['Zocalo_Piedra', 'Zocalo_Huecos', 'Cordon_Amarillo'] },
-  { id: 'fuste',    name: 'Fuste con la bandera',  z: [5.02, 13.62],  sw: '#D24A60',
-    objs: ['Fuste_Bandera', 'Fuste_Huecos', 'Rejas'] },
-  { id: 'cornisa',  name: 'Cornisa y canecillos',  z: [13.62, 14.58], sw: '#E8C14A',
-    objs: ['Cornisa_Amarilla', 'Canecillos'] },
-  { id: 'mirador',  name: 'Mirador y barandal',    z: [14.58, 16.02], sw: '#3A4750',
-    objs: ['Losa_Mirador', 'Piso_Mirador', 'Barandal'] },
-  { id: 'templete', name: 'Templete',              z: [14.94, 18.18], sw: '#EFE7D3',
-    objs: ['Columnas', 'Arquitrabe', 'Farol'] },
-  { id: 'cubierta', name: 'Cubierta a cuatro aguas', z: [18.18, 21.58], sw: '#2E7A4E',
-    objs: ['Cubierta', 'Faja_Alero'] },
-  { id: 'sonido',   name: 'Line arrays',           z: [14.94, 20.20], sw: '#17181C',
-    objs: ['Line_Array'] },
+/* Cuerpos de la escena, agrupados. Las cotas estan medidas desde el nivel del
+   mar: la explanada esta a +1,70 m, y sobre ella arranca el faro. */
+const GROUPS = [
+  {
+    title: 'El faro',
+    bodies: [
+      { name: 'Zócalo de mampostería', z: [1.70, 6.30],   sw: '#A89574',
+        objs: ['Zocalo_Piedra', 'Zocalo_Huecos', 'Cordon_Amarillo'] },
+      { name: 'Fuste con la bandera',  z: [6.72, 15.32],  sw: '#D24A60',
+        objs: ['Fuste_Bandera', 'Fuste_Huecos', 'Rejas'] },
+      { name: 'Cornisa y canecillos',  z: [15.32, 16.28], sw: '#E8C14A',
+        objs: ['Cornisa_Amarilla', 'Canecillos'] },
+      { name: 'Mirador y barandal',    z: [16.28, 17.72], sw: '#3A4750',
+        objs: ['Losa_Mirador', 'Piso_Mirador', 'Barandal'] },
+      { name: 'Templete',              z: [16.64, 19.88], sw: '#EFE7D3',
+        objs: ['Columnas', 'Arquitrabe', 'Farol'] },
+      { name: 'Cubierta',              z: [19.88, 23.28], sw: '#2E7A4E',
+        objs: ['Cubierta', 'Faja_Alero'] },
+      { name: 'Line arrays',           z: [16.64, 21.90], sw: '#17181C',
+        objs: ['Line_Array'] },
+    ],
+  },
+  {
+    title: 'El complejo',
+    bodies: [
+      { name: 'Explanada y terreno', z: [0.00, 1.70], sw: '#B0AC9F',
+        objs: ['Explanada', 'Cesped', 'Aparcamiento', 'Playa'] },
+      { name: 'Paseo tablado',       z: [1.55, 5.35], sw: '#965C3A',
+        objs: ['Tablado', 'Barandas_Tablado', 'Pilotes_Tablado', 'Bancos',
+               'Barandilla_Malecon', 'Farolas', 'Luminarias'] },
+      { name: 'Dársena y muelles',   z: [0.55, 0.90], sw: '#7F7C73',
+        objs: ['Muelles_Flotantes', 'Pilotes_Darsena'] },
+      { name: 'Lanchas amarradas',   z: [0.00, 1.60], sw: '#E0E2DE',
+        pre: ['Lanchas_'] },
+      { name: '24 kioscos',          z: [1.70, 5.85], sw: '#E0801F',
+        pre: ['Kioscos_'] },
+      { name: 'Edificio y anfiteatro', z: [1.70, 10.80], sw: '#D8DC8B',
+        pre: ['Edificio_', 'Anfiteatro_'] },
+      { name: 'Palmas y arbolado',   z: [1.70, 12.20], sw: '#1F7A33',
+        objs: ['Troncos_Palma', 'Palmas', 'Arbolado_Playa'] },
+      { name: 'Lámina de agua',      z: [0.00, 0.00], sw: '#1E7E8C',
+        objs: ['Agua'] },
+    ],
+  },
 ];
 
 const DATUMS = [
-  { z: 0.00,  label: 'arranque' },
-  { z: 4.60,  label: 'cordón' },
-  { z: 13.62, label: 'cornisa' },
-  { z: 14.94, label: 'mirador' },
-  { z: 18.18, label: 'alero' },
-  { z: 21.58, label: 'remate' },
+  { z: 0.00,  label: 'nivel del mar' },
+  { z: 1.70,  label: 'explanada' },
+  { z: 6.30,  label: 'cordón' },
+  { z: 15.32, label: 'cornisa' },
+  { z: 16.64, label: 'mirador' },
+  { z: 23.28, label: 'remate' },
 ];
 
 const canvas = document.getElementById('stage');
@@ -311,20 +348,20 @@ renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 400);
-camera.position.set(26, -28, 19);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 1400);
+camera.position.set(-58, 86, 54);
 camera.up.set(0, 0, 1);                         // el modelo viene con Z arriba
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.05).texture;
 
 const sun = new THREE.DirectionalLight(0xfff3e2, 2.6);
-sun.position.set(20, -26, 34);
+sun.position.set(-70, 80, 90);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.near = 6;
-sun.shadow.camera.far = 90;
-const S = 18;
+sun.shadow.camera.far = 340;
+const S = 105;
 Object.assign(sun.shadow.camera, { left: -S, right: S, top: S, bottom: -S });
 sun.shadow.camera.updateProjectionMatrix();
 sun.shadow.bias = -0.0012;
@@ -332,7 +369,7 @@ scene.add(sun);
 scene.add(new THREE.HemisphereLight(0xbfe3ea, 0x6b5f4a, 0.85));
 
 const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(30, 64),
+  new THREE.CircleGeometry(260, 64),
   new THREE.ShadowMaterial({ opacity: 0.22 })
 );
 floor.receiveShadow = true;
@@ -341,9 +378,9 @@ scene.add(floor);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
-controls.target.set(0, 0, 10.4);
-controls.minDistance = 12;
-controls.maxDistance = 90;
+controls.target.set(14, -10, 6);
+controls.minDistance = 14;
+controls.maxDistance = 400;
 controls.maxPolarAngle = Math.PI * 0.52;
 controls.autoRotateSpeed = 0.7;
 
@@ -398,7 +435,12 @@ function onLoaded(root) {
 let isolated = null;
 
 function meshesOf(body) {
-  return body.objs.map((n) => byName.get(n)).filter(Boolean);
+  const out = [];
+  byName.forEach((mesh, name) => {
+    if (body.objs && body.objs.includes(name)) out.push(mesh);
+    else if (body.pre && body.pre.some((p) => name.startsWith(p))) out.push(mesh);
+  });
+  return out;
 }
 
 function applyIsolation() {
@@ -415,7 +457,12 @@ function applyIsolation() {
 
 function buildParts() {
   const ul = document.getElementById('parts');
-  BODIES.forEach((body) => {
+  GROUPS.forEach((group) => {
+    const head = document.createElement('li');
+    head.className = 'grp';
+    head.textContent = group.title;
+    ul.appendChild(head);
+    group.bodies.forEach((body) => {
     const li = document.createElement('li');
     const b = document.createElement('button');
     b.type = 'button';
@@ -430,8 +477,9 @@ function buildParts() {
         el.setAttribute('aria-pressed', String(el === b && isolated === body)));
       applyIsolation();
     });
-    li.appendChild(b);
-    ul.appendChild(li);
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
   });
 }
 
@@ -475,8 +523,8 @@ spinBtn.addEventListener('click', () => {
 });
 
 document.getElementById('reset').addEventListener('click', () => {
-  camera.position.set(26, -28, 19);
-  controls.target.set(0, 0, 10.4);
+  camera.position.set(-58, 86, 54);
+  controls.target.set(14, -10, 6);
   controls.update();
 });
 
