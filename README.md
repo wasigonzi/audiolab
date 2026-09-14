@@ -95,6 +95,24 @@ reference/                       fotografía de referencia
 > El módulo del entorno se llama `entorno.py` y no `site.py` porque este último
 > nombre choca con el módulo `site` de la biblioteca estándar de Python.
 
+## Compatibilidad de los archivos
+
+| Archivo | Abre en |
+|---|---|
+| `exports/*.glb` | cualquier cosa: Blender 3.x+ (*File › Import › glTF 2.0*), Godot, Unity, Unreal, three.js, los visores de Windows y macOS, impresión 3D |
+| `exports/*.blend` | **Blender 5.0 o superior**, y solo ahí |
+
+Los `.blend` se generan con `bpy 5.0` y los archivos de Blender **no son
+compatibles hacia atrás**: en Blender 4.x no abren. Si usas una versión
+anterior, importa el `.glb`, que lleva la geometría, los materiales y las
+texturas embebidas.
+
+Ambos `.blend` se guardan ya montados —cielo, sol, cámara, Cycles y la gestión
+de color— y con las vistas 3D en **Material Preview**. Esto último importa: si
+se guardan con el sombreado de fábrica (*Solid*), Blender los abre mostrando
+color plano y las texturas de imagen no se ven, aunque estén ahí. Parece que el
+modelo viniera sin ellas.
+
 ## Detalles de implementación
 
 **Muros con huecos sin booleanas.** Las operaciones booleanas de Blender son

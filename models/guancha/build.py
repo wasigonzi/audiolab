@@ -498,20 +498,26 @@ def main():
     print(f"[guancha] altura total = {Z_APEX + 1.0:.2f} m")
 
     os.makedirs(args.out, exist_ok=True)
-    blend = os.path.join(args.out, "guancha.blend")
-    bpy.ops.wm.save_as_mainfile(filepath=blend)
-    print("[guancha] blend ->", blend)
+    import render_views
 
+    # el glb se exporta primero, con solo la geometria seleccionada: asi no
+    # arrastra la camara ni el sol que se anaden justo despues
     for o in bpy.data.objects:
-        o.select_set(True)
+        o.select_set(o.type == "MESH")
     glb = os.path.join(args.out, "guancha.glb")
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
                               use_selection=True, export_apply=True)
     print("[guancha] glb   ->", glb, os.path.getsize(glb) // 1024, "KB")
 
+    # el .blend se guarda ya montado: cielo, sol, camara, Cycles y las vistas
+    # en Material Preview, para que se abra mostrando las texturas
+    render_views.prepare_scene(args.samples, args.res, view="hero")
+    blend = os.path.join(args.out, "guancha.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=blend)
+    print("[guancha] blend ->", blend)
+
     if args.render:
-        import render_views
-        render_views.render_all(args.out, args.samples, args.res)
+        render_views.render_all(args.out, args.samples, args.res, prepared=True)
 
 
 if __name__ == "__main__":

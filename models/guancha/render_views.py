@@ -115,18 +115,30 @@ def setup_camera(location, target, lens=45.0):
     return cam
 
 
-VIEWS = {
-    # nombre: (posicion, objetivo, lente, ancho, alto)
-    "hero":      ((24.0, -26.0, 17.5), (0.0, 0.0, 10.5), 52.0, 0.80, 1.0),
-    "frontal":   ((0.0, -52.0, 10.5),  (0.0, 0.0, 10.5), 70.0, 0.62, 1.0),
-    "templete":  ((13.0, -13.5, 20.5), (0.0, 0.0, 17.6), 78.0, 1.0, 0.78),
-    "contrapicado": ((7.0, -8.5, 1.6), (0.0, 0.0, 13.0), 26.0, 0.72, 1.0),
-}
+def set_viewport_shading(kind="MATERIAL"):
+    """Deja las vistas 3D en Material Preview.
+
+    Si el .blend se guarda con el sombreado de fabrica (SOLID), Blender lo abre
+    mostrando color plano y las texturas de imagen no se ven: parece que el
+    modelo viniera sin ellas.
+    """
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type != "VIEW_3D":
+                continue
+            for space in area.spaces:
+                if space.type == "VIEW_3D":
+                    space.shading.type = kind
 
 
-def render_all(out_dir, samples=64, res=1100, views=None, with_site=True,
-               sun_elevation=38.0, sun_rotation=225.0, prefix="guancha",
-               exposure=-0.45):
+def prepare_scene(samples=64, res=1100, with_site=True, sun_elevation=38.0,
+                  sun_rotation=225.0, exposure=-0.45, view=None, table=None,
+                  aspect=(1.0, 1.0)):
+    """Motor, gestion de color, cielo, sol, camara y sombreado de vista.
+
+    Se llama antes de guardar el .blend para que el archivo se abra ya listo:
+    con texturas visibles y con algo que iluminar el render.
+    """
     using_cycles = _enable_cycles()
     scene = bpy.context.scene
     if using_cycles:
@@ -149,6 +161,34 @@ def render_all(out_dir, samples=64, res=1100, views=None, with_site=True,
     setup_world(sun_elevation, sun_rotation)
     if with_site:
         setup_site()
+
+    table = table if table is not None else VIEWS
+    if view and view in table:
+        loc, tgt, lens, aw, ah = table[view]
+        setup_camera(loc, tgt, lens)
+        scene.render.resolution_x = int(res * aw)
+        scene.render.resolution_y = int(res * ah)
+
+    set_viewport_shading("MATERIAL")
+    return scene
+
+
+VIEWS = {
+    # nombre: (posicion, objetivo, lente, ancho, alto)
+    "hero":      ((24.0, -26.0, 17.5), (0.0, 0.0, 10.5), 52.0, 0.80, 1.0),
+    "frontal":   ((0.0, -52.0, 10.5),  (0.0, 0.0, 10.5), 70.0, 0.62, 1.0),
+    "templete":  ((13.0, -13.5, 20.5), (0.0, 0.0, 17.6), 78.0, 1.0, 0.78),
+    "contrapicado": ((7.0, -8.5, 1.6), (0.0, 0.0, 13.0), 26.0, 0.72, 1.0),
+}
+
+
+def render_all(out_dir, samples=64, res=1100, views=None, with_site=True,
+               sun_elevation=38.0, sun_rotation=225.0, prefix="guancha",
+               exposure=-0.45, prepared=False):
+    scene = bpy.context.scene
+    if not prepared:
+        prepare_scene(samples, res, with_site, sun_elevation, sun_rotation,
+                      exposure)
 
     renders_dir = os.path.join(out_dir, "renders")
     os.makedirs(renders_dir, exist_ok=True)

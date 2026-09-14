@@ -71,23 +71,31 @@ def main():
           f"{sum(len(o.data.polygons) for o in meshes)} caras")
 
     os.makedirs(args.out, exist_ok=True)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(args.out, "guancha_complejo.blend"))
+    import render_views
+    render_views.VIEWS = SCENE_VIEWS
 
+    # primero el glb, con solo la geometria: la camara y el sol llegan despues
     for o in bpy.data.objects:
-        o.select_set(True)
+        o.select_set(o.type == "MESH")
     glb = os.path.join(args.out, "guancha_complejo.glb")
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
                               use_selection=True, export_apply=True)
     print("[escena] glb ->", glb, os.path.getsize(glb) // 1024, "KB")
 
+    # el .blend se guarda listo para abrir y renderizar
+    render_views.prepare_scene(args.samples, args.res, with_site=False,
+                               sun_elevation=34.0, sun_rotation=208.0,
+                               exposure=-0.62, view="conjunto")
+    blend = os.path.join(args.out, "guancha_complejo.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=blend)
+    print("[escena] blend ->", blend)
+
     if args.render:
-        import render_views
-        render_views.VIEWS = SCENE_VIEWS
         only = set(v for v in args.views.split(",") if v) or None
         render_views.render_all(args.out, args.samples, args.res, views=only,
                                 with_site=False, sun_elevation=34.0,
                                 sun_rotation=208.0, prefix="complejo",
-                                exposure=-0.62)
+                                exposure=-0.62, prepared=True)
 
 
 if __name__ == "__main__":
