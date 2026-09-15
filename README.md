@@ -177,7 +177,7 @@ Cuatro bloques sobre la parcela, con vial de acceso, aparcamiento, verja
 perimetral, el muro del rótulo, alumbrado, tendido aéreo y arbolado —
 flamboyanes incluidos, que es de donde viene el nombre.
 
-**443 objetos visibles y 56 875 caras, pero solo 47 geometrías distintas**: el
+**416 objetos visibles y 54 659 caras, pero solo 47 geometrías distintas**: el
 bloque se modela una vez y se replica, y dentro de él celosías, persianas,
 rejas y coches son duplicados enlazados que comparten malla.
 
