@@ -1,8 +1,20 @@
-# La Guancha — modelo 3D
+# Modelado 3D paramétrico — Puerto Rico
+
+Reconstrucciones modeladas **por código** con Blender (`bpy`) a partir de
+fotografías de referencia. Ninguna se dibujó a mano: toda la geometría se
+genera desde un script, y las texturas se rasterizan por procedimiento.
+
+| Escena | Qué es |
+|---|---|
+| **La Guancha** | El faro del Paseo Tablado y su complejo, en Ponce |
+| **El Flamboyán** | Bloques de vivienda de cuatro plantas y su parcela |
+
+---
+
+# La Guancha — el faro y su complejo
 
 Reconstrucción paramétrica del faro del **Paseo Tablado La Guancha** (Ponce,
-Puerto Rico) y del complejo que lo rodea, modelada por código con Blender
-(`bpy`) a partir de una fotografía de referencia.
+Puerto Rico) y del complejo que lo rodea.
 
 ![El conjunto](exports/renders/complejo_conjunto.png)
 
@@ -143,9 +155,73 @@ regala subiendo hacia la proa y la bañera rehundida a popa de la consola. Con
 esas tres líneas —cuaderna, regala y pantoque— una caja pasa a leerse como un
 barco.
 
+---
+
+# El Flamboyán — bloques de vivienda
+
+![Entrada](exports/renders/flamboyan_entrada.png)
+
+Walk-up de cuatro plantas en hormigón visto pintado, del tipo que puebla los
+condominios y residenciales de Puerto Rico. Lo que define esta arquitectura no
+es la forma sino cinco rasgos concretos, y el modelo los lleva todos:
+
+| Rasgo | En el modelo |
+|---|---|
+| **Celosías de bloque ornamental** | Retícula de rombos, un aspa por celda |
+| **Ventanas de persiana** ("Miami") | Lamas horizontales inclinadas 24° |
+| **Bandas turquesa** en el canto del forjado | Hacen también de pretil del balcón |
+| **Escalera exterior abierta** | Dos tiros por planta, con meseta y barandilla |
+| **Balcones con reja** | Recogidos 1,15 m, barrotes verticales |
+
+Cuatro bloques sobre la parcela, con vial de acceso, aparcamiento, verja
+perimetral, el muro del rótulo, alumbrado, tendido aéreo y arbolado —
+flamboyanes incluidos, que es de donde viene el nombre.
+
+**443 objetos visibles y 56 875 caras, pero solo 47 geometrías distintas**: el
+bloque se modela una vez y se replica, y dentro de él celosías, persianas,
+rejas y coches son duplicados enlazados que comparten malla.
+
+```bash
+python3 models/flamboyan/build_scene.py --render
+```
+
+| Vista | |
+|---|---|
+| `flamboyan_entrada` | a pie de calle desde la entrada, como la foto de referencia |
+| `flamboyan_conjunto` | panorámica de la parcela |
+| `flamboyan_bloque` | un bloque de cerca: celosías, persianas y escalera |
+| `flamboyan_patio` | el aparcamiento tras la verja |
+
+### Dos fallos que costaron encontrar
+
+**Los bloques se colocaban dos veces.** `instance_group` deja las copias ya en
+coordenadas de mundo; al emparentarlas además a un vacío que llevaba la misma
+traslación y giro, el bloque acababa desplazado y rotado el doble. La inversa
+del padre no lo corregía porque `matrix_world` aún no estaba actualizado.
+
+**Las celosías desaparecían.** Mismo origen: `instance_group` leía
+`matrix_world` de los duplicados antes de que el depsgraph reflejara el
+emparentado, y los colocaba todos en el origen. Hace falta un
+`view_layer.update()` antes de instanciar — y no ocultar las mallas maestras
+hasta después de haberlas copiado.
+
+---
+
+## Código compartido
+
+Las dos escenas se apoyan en los mismos módulos, en `models/`:
+
+```
+models/meshlib.py       primitivas, muros con huecos, instanciado
+models/matlib.py        materiales Principled con textura y normales
+models/vegetacion.py    palmas, arbolado y flamboyanes
+models/render_views.py  cielo, sol, cámaras, Cycles y gestión de color
+tools/textures.py       todas las texturas, en PNG y sin dependencias
+```
+
 ## Licencias
 
-El faro es una obra pública real; este modelo es una interpretación propia
-hecha a partir de una foto y no reproduce planos. La fotografía de referencia en
-`reference/` es de **@khrizrivera** y se guarda solo como documentación del
-proceso.
+Ambos son edificios reales; estos modelos son interpretaciones propias hechas a
+partir de fotos, y no reproducen planos. Las fotografías de referencia se
+guardan en `reference/` solo como documentación del proceso: la del faro es de
+**@khrizrivera**; la del condominio procede de una vista de calle.

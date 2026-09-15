@@ -15,7 +15,9 @@ import sys
 
 import bpy
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.dirname(HERE))   # models/: meshlib, render_views, vegetacion
 
 import build            # noqa: E402
 import entorno        # noqa: E402  (se llama asi para no chocar con el modulo 'site' de la stdlib)

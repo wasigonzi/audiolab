@@ -312,6 +312,60 @@ def sand(path, size=512, seed=41):
 
 
 # --------------------------------------------------------------------------
+# Hormigon pintado de clima tropical y asfalto
+# --------------------------------------------------------------------------
+def weathered_wall(path, size=1024, base=(201, 203, 197), seed=51,
+                   streaks=0.55, mildew=0.40):
+    """Paramento de hormigon pintado, con el desgaste propio del tropico.
+
+    Lo que define estas fachadas no es el color sino los escurridos: regueros
+    verticales de suciedad que bajan desde el pretil y los alfeizares, mas las
+    manchas de moho en las zonas que no secan.
+    """
+    rng = np.random.default_rng(seed)
+    img = np.array(base, float)[None, None, :] * np.ones((size, size, 1))
+
+    # veladura general de la pintura
+    patchy = _value_noise(size, size, 4, seed=seed, octaves=4)
+    img *= (0.90 + 0.16 * patchy)[:, :, None]
+
+    # juntas de encofrado, muy tenues
+    grid = np.zeros((size, size))
+    for step, weight in ((size // 4, 0.55), (size // 8, 0.25)):
+        ys = np.arange(size)[:, None]
+        grid = np.maximum(grid, weight * (ys % step < 2))
+    img *= (1.0 - 0.06 * grid)[:, :, None]
+
+    # regueros verticales: ruido muy estirado en vertical, entrando desde arriba
+    run = _value_noise(size, size, (2, 22), seed=seed + 1, octaves=3)
+    fall = np.clip(np.linspace(0.0, 1.0, size) * 2.2, 0, 1)[:, None]
+    dirt = np.clip((run - 0.48) * 3.2, 0, 1) * fall * streaks
+    img *= (1.0 - 0.34 * dirt)[:, :, None]
+
+    # moho: manchas verdosas en las bandas bajas y los rincones
+    moss = _value_noise(size, size, 7, seed=seed + 2, octaves=4)
+    moss = np.clip((moss - 0.56) * 3.6, 0, 1) * mildew
+    tint = np.array((104, 116, 92), float)
+    img = img * (1 - moss[:, :, None]) + tint[None, None, :] * moss[:, :, None]
+
+    img += rng.normal(0, 3.2, img.shape)
+    return write_png(path, np.clip(img, 0, 255))
+
+
+def asphalt(path, size=512, seed=61):
+    rng = np.random.default_rng(seed)
+    base = np.array((62, 62, 64), float)
+    fine = _value_noise(size, size, 60, seed=seed, octaves=3)
+    wide = _value_noise(size, size, 5, seed=seed + 1, octaves=3)
+    img = base[None, None, :] * (0.72 + 0.46 * fine + 0.20 * wide)[:, :, None]
+    # arido visto
+    chips = rng.random((size, size)) > 0.986
+    img[chips] = np.clip(img[chips] * 1.85, 0, 255)
+    img += rng.normal(0, 4.0, img.shape)
+    return write_png(path, np.clip(img, 0, 255))
+
+
+# --------------------------------------------------------------------------
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     made = [
@@ -323,6 +377,10 @@ def main(out_dir):
         deck_planks(os.path.join(out_dir, "deck_planks.png")),
         concrete(os.path.join(out_dir, "concrete.png")),
         sand(os.path.join(out_dir, "sand.png")),
+        weathered_wall(os.path.join(out_dir, "painted_concrete.png")),
+        weathered_wall(os.path.join(out_dir, "painted_teal.png"),
+                       base=(64, 108, 124), seed=57, streaks=0.42, mildew=0.24),
+        asphalt(os.path.join(out_dir, "asphalt.png")),
     ]
     for p in made:
         print("  ->", p, os.path.getsize(p) // 1024, "KB")

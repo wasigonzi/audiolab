@@ -142,18 +142,22 @@ def add_box(mb, center, size, uv_scale=1.0):
         mb.add([v[i] for i in q], uv)
 
 
-def add_cylinder(mb, center, r0, r1, h, segments=24, caps=True):
-    cx, cy, z0 = center
-    ring0 = [
-        (cx + r0 * math.cos(2 * math.pi * i / segments),
-         cy + r0 * math.sin(2 * math.pi * i / segments), z0)
-        for i in range(segments)
-    ]
-    ring1 = [
-        (cx + r1 * math.cos(2 * math.pi * i / segments),
-         cy + r1 * math.sin(2 * math.pi * i / segments), z0 + h)
-        for i in range(segments)
-    ]
+def add_cylinder(mb, center, r0, r1, h, segments=24, caps=True, axis="Z"):
+    """Cilindro o tronco de cono. `axis` elige la direccion del eje: util para
+    ruedas y barras horizontales sin tener que rotar despues."""
+    cx, cy, cz = center
+
+    def at(r, t, i):
+        a = 2 * math.pi * i / segments
+        u, v = r * math.cos(a), r * math.sin(a)
+        if axis == "X":
+            return (cx + t, cy + u, cz + v)
+        if axis == "Y":
+            return (cx + u, cy + t, cz + v)
+        return (cx + u, cy + v, cz + t)
+
+    ring0 = [at(r0, 0.0, i) for i in range(segments)]
+    ring1 = [at(r1, h, i) for i in range(segments)]
     for i in range(segments):
         j = (i + 1) % segments
         u0, u1 = i / segments, (i + 1) / segments
@@ -278,3 +282,109 @@ def wall_panels(width, height, openings, arch_segments=14):
             right.append((s1, b))
         outlines.append((op, left + list(reversed(right))))
     return panels, outlines
+
+
+# --------------------------------------------------------------------------
+# Muros planos (planta rectangular, no solo cuadrada)
+# --------------------------------------------------------------------------
+def add_flat_wall(wall_mb, recess_mb, p0, p1, z0, height, openings=(),
+                  tile=2.5, reveal=0.22, uv_origin=0.0):
+    """Muro vertical entre dos puntos de la planta, con sus huecos y mochetas.
+
+    Caminando de p0 a p1 el exterior queda a la derecha. Los huecos se dan en
+    coordenadas del muro: x a lo largo desde p0, y en altura desde z0. `tile`
+    son los metros que ocupa una repeticion de la textura.
+    """
+    (x0, y0), (x1, y1) = p0, p1
+    dx, dy = x1 - x0, y1 - y0
+    length = math.hypot(dx, dy)
+    if length < 1e-6:
+        return 0.0
+    ux, uy = dx / length, dy / length
+    inx, iny = -uy, ux                      # normal hacia el interior
+
+    def f(x, y):
+        return (x0 + ux * x, y0 + uy * x, z0 + y)
+
+    def uv(x, y):
+        return ((uv_origin + x) / tile, y / tile)
+
+    openings = list(openings)
+    panels, outlines = wall_panels(length, height, openings)
+    for a, b, c, d in panels:
+        wall_mb.add([f(a, c), f(b, c), f(b, d), f(a, d)],
+                    [uv(a, c), uv(b, c), uv(b, d), uv(a, d)])
+
+    for op, outline in outlines:
+        depth = op.get("depth", reveal)
+        pts = [f(x, y) for x, y in outline]
+        inner = [(p[0] + inx * depth, p[1] + iny * depth, p[2]) for p in pts]
+        for k in range(len(pts)):
+            j = (k + 1) % len(pts)
+            recess_mb.add([pts[k], pts[j], inner[j], inner[k]],
+                          [(0, 0), (1, 0), (1, 1), (0, 1)])
+        if op.get("cap", True):              # fondo del hueco
+            back = [f(op["x0"], op["y0"]), f(op["x1"], op["y0"]),
+                    f(op["x1"], op["y1"]), f(op["x0"], op["y1"])]
+            recess_mb.add([(p[0] + inx * depth, p[1] + iny * depth, p[2])
+                           for p in back],
+                          [(0, 0), (1, 0), (1, 1), (0, 1)])
+    return length
+
+
+def add_box_rot(mb, center, size, rx=0.0, ry=0.0, rz=0.0):
+    """Caja con rotacion en radianes, aplicada en el orden X, Y, Z."""
+    cx, cy, cz = center
+    sx, sy, sz = (s / 2.0 for s in size)
+    cosx, sinx = math.cos(rx), math.sin(rx)
+    cosy, siny = math.cos(ry), math.sin(ry)
+    cosz, sinz = math.cos(rz), math.sin(rz)
+
+    def place(px, py, pz):
+        py, pz = py * cosx - pz * sinx, py * sinx + pz * cosx
+        px, pz = px * cosy + pz * siny, -px * siny + pz * cosy
+        px, py = px * cosz - py * sinz, px * sinz + py * cosz
+        return (cx + px, cy + py, cz + pz)
+
+    v = [place(x, y, z)
+         for x, y, z in ((-sx, -sy, -sz), (sx, -sy, -sz), (sx, sy, -sz), (-sx, sy, -sz),
+                         (-sx, -sy, sz), (sx, -sy, sz), (sx, sy, sz), (-sx, sy, sz))]
+    uvq = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    for q in ((0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7),
+              (4, 5, 6, 7), (3, 2, 1, 0)):
+        mb.add([v[i] for i in q], uvq)
+
+
+# --------------------------------------------------------------------------
+# Instanciado: duplicados que comparten malla
+# --------------------------------------------------------------------------
+def link_copy(obj, location=(0.0, 0.0, 0.0), rotation_z=0.0, name=None,
+              parent=None):
+    """Duplicado enlazado. Comparte los datos de malla, asi el archivo no crece
+    y el glTF exporta una sola geometria referenciada varias veces."""
+    dup = obj.copy()
+    dup.location = location
+    dup.rotation_euler = (0.0, 0.0, rotation_z)
+    if name:
+        dup.name = name
+    if parent is not None:
+        dup.parent = parent
+    bpy.context.collection.objects.link(dup)
+    return dup
+
+
+def instance_group(objs, location=(0.0, 0.0, 0.0), rotation_z=0.0, parent=None):
+    """Replica un conjunto de objetos conservando sus posiciones relativas."""
+    import mathutils
+    rot = mathutils.Matrix.Rotation(rotation_z, 4, "Z")
+    base = mathutils.Matrix.Translation(location) @ rot
+    out = []
+    for o in objs:
+        dup = o.copy()
+        dup.matrix_world = base @ o.matrix_world
+        if parent is not None:
+            dup.parent = parent
+            dup.matrix_parent_inverse = parent.matrix_world.inverted()
+        bpy.context.collection.objects.link(dup)
+        out.append(dup)
+    return out

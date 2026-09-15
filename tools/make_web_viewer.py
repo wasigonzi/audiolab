@@ -14,6 +14,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "models"))
 sys.path.insert(0, os.path.join(ROOT, "models", "guancha"))
 
 import textures  # noqa: E402
