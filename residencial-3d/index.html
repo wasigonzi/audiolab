@@ -1204,6 +1204,17 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
+// punto de enganche para herramientas externas (ver tools/export-glb.mjs)
+window.__modelo = {
+  scene: scene, camera: camera, renderer: renderer, sun: sun, sky: sky,
+  terrain: terrain, site: site, blocks: BLOCKS,
+  instanced: [
+    { m: trunkIM,  name: 'Arboles_tronco' },
+    { m: leafIM,   name: 'Arboles_follaje' },
+    { m: carBody,  name: 'Vehiculos_carroceria' },
+    { m: carDark,  name: 'Vehiculos_detalle' }
+  ]
+};
 bootMsg.textContent = 'Listo';
 setTimeout(function () { bootEl.classList.add('gone'); }, 180);
 setTimeout(function () { bootEl.style.display = 'none'; }, 900);

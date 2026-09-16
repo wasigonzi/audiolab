@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# los binarios no se normalizan
+*.glb binary
+*.gltf binary

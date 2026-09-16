@@ -1,0 +1,13 @@
+{
+  "name": "complejo-en-herradura-tools",
+  "private": true,
+  "type": "module",
+  "description": "Exportación del modelo procedural de index.html a glTF binario",
+  "scripts": {
+    "export": "node export-glb.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1",
+    "three": "0.128.0"
+  }
+}

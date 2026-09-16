@@ -24,6 +24,29 @@ Las dimensiones se estiman de la foto tomando el ancho de crujía (6.0 m) y la
 altura de entrepiso (2.9 m) como referencia. Las cifras del panel (unidades,
 plazas, huella) se cuentan sobre la geometría generada, no están escritas a mano.
 
+## Archivo .glb
+
+`dist/complejo-en-herradura.glb` es la misma escena exportada a glTF binario
+(métrico, Y arriba, ~101 000 triángulos, 5.4 MB). Abre en Blender, Godot,
+Unity, Windows 3D Viewer, `gltf-viewer`, etc.
+
+La geometría es procedural y sólo existe cuando la página corre, así que la
+exportación abre `index.html` en Chromium headless y vuelca la escena:
+
+```sh
+cd tools && npm install
+node export-glb.mjs                      # opciones por defecto
+node export-glb.mjs --radio 0 --terreno 0 # escena completa (~47 MB)
+```
+
+Al exportar se hornean las mallas instanciadas (glTF no lleva instancias de
+forma portátil), se sueldan vértices, se descartan las UV —el modelo no usa
+texturas— y se recortan el arbolado lejano y el plano de terreno, que no
+aportan nada al conjunto y se llevaban el 90 % del peso.
+
+El .glb no incluye luces ni cielo: son del visor. Los colores van en
+`baseColorFactor` lineal y el terreno lleva su degradado en `COLOR_0`.
+
 ## Controles
 
 - Arrastrar: orbitar · Shift o botón derecho: desplazar · Rueda o pellizco: acercar
