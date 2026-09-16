@@ -268,7 +268,8 @@
       g.fillRect(Math.random()*w,Math.random()*h,2,3);
     }
   },40,40);
-  slab(900,900,new THREE.MeshLambertMaterial({map:grassTex}),0,0,0);
+  var groundPlane=slab(900,900,new THREE.MeshLambertMaterial({map:grassTex}),0,0,0);
+  groundPlane.userData.ground=true;
 
   var concreteTex=tex(256,256,function(g,w,h){
     g.fillStyle=hex(C.concrete); g.fillRect(0,0,w,h);
@@ -711,12 +712,17 @@
       prev.set(s.position.x,s.position.y,0);
     }
     var top=new THREE.Vector3(lean*2,h,0);
-    for(var f=0;f<8;f++){
-      var a=f*Math.PI/4;
-      var frond=new THREE.Mesh(new THREE.ConeGeometry(0.55,3.6,4),flat(f%2?0x4f8f3f:0x3f7c33));
-      frond.position.set(top.x+Math.cos(a)*1.5,top.y+0.25,top.z+Math.sin(a)*1.5);
-      frond.rotation.set(Math.sin(a)*1.15,0,-Math.cos(a)*1.15);
-      frond.scale.set(1,1,0.4);
+    for(var f=0;f<9;f++){
+      var a=f*(Math.PI*2/9)+Math.random()*0.15;
+      var len=4.2+Math.random()*1.6;
+      var fg=new THREE.ConeGeometry(0.62,len,4);
+      fg.translate(0,len/2,0);
+      var frond=new THREE.Mesh(fg,flat(f%2?0x4f8f3f:0x3f7c33));
+      frond.position.set(top.x,top.y,top.z);
+      frond.rotation.order='YXZ';
+      frond.rotation.y=a;
+      frond.rotation.x=1.02+Math.random()*0.42;
+      frond.scale.set(1,1,0.3);
       frond.castShadow=true; g.add(frond);
     }
     var nut=new THREE.Mesh(new THREE.SphereGeometry(0.3,6,5),mat(0x7a6a3a));
@@ -757,18 +763,18 @@
   /* distant skyline / hills */
   function hill(x,z,r,h,color){
     var m=new THREE.Mesh(new THREE.SphereGeometry(r,14,8),new THREE.MeshLambertMaterial({color:color,flatShading:true}));
-    m.position.set(x,-r*0.25,z); m.scale.y=h; world.add(m);
+    m.position.set(x,-r*0.25,z); m.scale.y=h; m.userData.bg=true; world.add(m);
   }
   hill(-180,-320,110,0.28,0x3c6b53);
   hill(40,-380,150,0.24,0x36614d);
   hill(260,-300,120,0.3,0x32594a);
   [[-120,-210,26,16],[ -70,-230,18,22],[120,-200,30,14],[170,-240,20,26]].forEach(function(b){
     var bl=box(b[2],b[3],b[2]*0.7,mat(0xc8cfcb),b[0],b[3]/2,b[1],0,false);
-    bl.receiveShadow=false;
+    bl.receiveShadow=false; bl.userData.bg=true;
   });
   /* coliseum dome nod */
   var dome=new THREE.Mesh(new THREE.SphereGeometry(26,20,12,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0xd7dbd4}));
-  dome.position.set(70,0,-140); dome.scale.y=0.55; world.add(dome);
+  dome.position.set(70,0,-140); dome.scale.y=0.55; dome.userData.bg=true; world.add(dome);
 
   /* ---------------- tiny figures for scale ---------------- */
   var shirts=[0xe6338c,0xf3c53a,0x12a79b,0xf26a35,0x2f6fb5,0xf6f7f4];
@@ -969,6 +975,9 @@
   renderer.setClearColor(0xbcd9e8,1);
   frame();
   loadingEl.remove();
+
+  /* exposed so the scene can be exported to glTF from a build script */
+  window.ECOS_PARK={scene:scene,world:world,camera:camera,views:views};
 
   if(document.fonts && document.fonts.ready){
     document.fonts.ready.then(function(){
