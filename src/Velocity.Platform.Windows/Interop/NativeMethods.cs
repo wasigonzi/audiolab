@@ -296,4 +296,41 @@ internal static partial class NativeMethods
 
     /// <summary>Enumerates power schemes rather than subgroups or settings.</summary>
     internal const uint AccessScheme = 16;
+
+    /// <summary>Retrieves the CPU sets the system exposes.</summary>
+    /// <param name="process">Process handle, or <see cref="IntPtr.Zero"/> for the system.</param>
+    /// <param name="buffer">Destination buffer, or <see cref="IntPtr.Zero"/> to query the size.</param>
+    /// <param name="bufferLength">Buffer size in bytes.</param>
+    /// <param name="returnedLength">Receives the number of bytes written or required.</param>
+    /// <param name="flags">Reserved; must be zero.</param>
+    /// <returns><see langword="true"/> on success.</returns>
+    [LibraryImport(Kernel32, EntryPoint = "GetSystemCpuSetInformation", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool GetSystemCpuSetInformation(
+        IntPtr buffer,
+        uint bufferLength,
+        out uint returnedLength,
+        IntPtr process,
+        uint flags);
+
+    /// <summary>Sets the CPU sets a process's threads are preferentially scheduled on.</summary>
+    /// <param name="process">Process handle.</param>
+    /// <param name="cpuSetIds">CPU set identifiers, or <see cref="IntPtr.Zero"/> to clear.</param>
+    /// <param name="cpuSetIdCount">Number of identifiers.</param>
+    /// <returns><see langword="true"/> on success.</returns>
+    /// <remarks>
+    /// A CPU set is a scheduling preference the kernel may override under load, which is why it is
+    /// the right tool for a game and a hard affinity mask is not.
+    /// </remarks>
+    [LibraryImport(Kernel32, EntryPoint = "SetProcessDefaultCpuSets", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool SetProcessDefaultCpuSets(IntPtr process, IntPtr cpuSetIds, uint cpuSetIdCount);
+
+    // SYSTEM_CPU_SET_INFORMATION, from the documented layout. Fixed size per entry.
+    internal const int CpuSetEntrySize = 32;
+    internal const int CpuSetTypeOffset = 4;
+    internal const int CpuSetIdOffset = 8;
+    internal const int CpuSetGroupOffset = 12;
+    internal const int CpuSetLogicalProcessorIndexOffset = 14;
+    internal const uint CpuSetInformationType = 0;
 }

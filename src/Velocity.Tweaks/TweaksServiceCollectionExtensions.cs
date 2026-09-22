@@ -24,6 +24,8 @@ public static class TweaksServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<ITweak, SchedulerQuantumTweak>();
+        services.AddSingleton<ITweak, BackgroundProcessPriorityTweak>();
+        services.AddSingleton<ITweak, GameCorePlacementTweak>();
 
         return services;
     }

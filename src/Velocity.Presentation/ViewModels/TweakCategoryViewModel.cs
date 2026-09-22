@@ -274,7 +274,7 @@ public sealed partial class TweakCategoryViewModel : ViewModelBase
         item.Compatibility = compatibility.Status;
         item.CompatibilityReason = compatibility.Reason;
 
-        foreach (StateKey key in tweak.GetStateKeys(context))
+        foreach (StateKey key in await tweak.GetStateKeysAsync(context, cancellationToken).ConfigureAwait(true))
         {
             item.StateKeys.Add(key.ToString());
         }

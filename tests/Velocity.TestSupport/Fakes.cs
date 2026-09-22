@@ -126,8 +126,10 @@ public sealed class ScriptedTweak : ITweak, ICustomRollback
     public IReadOnlyList<StateKey>? DeclaredKeysOverride { get; set; }
 
     /// <inheritdoc />
-    public IReadOnlyList<StateKey> GetStateKeys(TweakContext context) =>
-        DeclaredKeysOverride ?? new[] { Key };
+    public Task<IReadOnlyList<StateKey>> GetStateKeysAsync(
+        TweakContext context,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(DeclaredKeysOverride ?? new[] { Key });
 
     /// <inheritdoc />
     public Task<CompatibilityResult> CheckCompatibilityAsync(

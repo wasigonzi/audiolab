@@ -92,7 +92,10 @@ public sealed class SchedulerQuantumTweak : ITweak
     };
 
     /// <inheritdoc />
-    public IReadOnlyList<StateKey> GetStateKeys(TweakContext context) => new[] { Key };
+    public Task<IReadOnlyList<StateKey>> GetStateKeysAsync(
+        TweakContext context,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<StateKey>>(new[] { Key });
 
     /// <inheritdoc />
     public Task<CompatibilityResult> CheckCompatibilityAsync(

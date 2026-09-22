@@ -5,7 +5,7 @@ namespace Velocity.Core.State;
 
 /// <summary>
 /// Thrown when a tweak writes a state key it did not declare through
-/// <see cref="Velocity.Abstractions.Tweaks.ITweak.GetStateKeys"/>.
+/// <see cref="Velocity.Abstractions.Tweaks.ITweak.GetStateKeysAsync"/>.
 /// </summary>
 /// <remarks>
 /// This is treated as a defect in the tweak, not a runtime condition to recover from: an undeclared

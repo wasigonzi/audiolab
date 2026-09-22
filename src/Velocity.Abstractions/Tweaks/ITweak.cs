@@ -11,7 +11,7 @@ namespace Velocity.Abstractions.Tweaks;
 /// <remarks>
 /// <para>
 /// The engine, not the tweak, owns snapshotting and rollback. A tweak declares the state it will
-/// touch through <see cref="GetStateKeys"/>; the transaction coordinator captures those keys
+/// touch through <see cref="GetStateKeysAsync"/>; the transaction coordinator captures those keys
 /// before <see cref="ApplyAsync"/> runs and can restore them afterwards without any tweak specific
 /// undo code. Tweaks whose effect cannot be expressed as state keys additionally implement
 /// <see cref="ICustomRollback"/>.
@@ -30,11 +30,17 @@ public interface ITweak
     /// The system state this tweak reads and writes on the given machine.
     /// </summary>
     /// <param name="context">Execution context describing the machine.</param>
+    /// <param name="cancellationToken">Token used to abort the enumeration.</param>
     /// <returns>
     /// Every key that <see cref="ApplyAsync"/> may write. Returning a key that is not written is
     /// harmless; writing a key that was not returned fails the transaction.
     /// </returns>
-    IReadOnlyList<StateKey> GetStateKeys(TweakContext context);
+    /// <remarks>
+    /// Asynchronous because for some modules the answer depends on the machine: a module that
+    /// re-prioritises background processes cannot know which keys it will touch without first
+    /// reading the process list.
+    /// </remarks>
+    Task<IReadOnlyList<StateKey>> GetStateKeysAsync(TweakContext context, CancellationToken cancellationToken);
 
     /// <summary>Evaluates whether the tweak may run on this machine.</summary>
     /// <param name="context">Execution context.</param>

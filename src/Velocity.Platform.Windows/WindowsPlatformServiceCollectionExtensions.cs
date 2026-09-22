@@ -8,7 +8,10 @@ using Velocity.Abstractions.Privileges;
 using Velocity.Abstractions.State;
 using Velocity.Abstractions.Telemetry;
 using Velocity.Platform.Windows.Ipc;
+using Velocity.Abstractions.Processes;
+using Velocity.Core.Processes;
 using Velocity.Platform.Windows.Privileges;
+using Velocity.Platform.Windows.Processes;
 using Velocity.Platform.Windows.Probes;
 using Velocity.Platform.Windows.Telemetry;
 using Velocity.Platform.Windows.State;
@@ -65,6 +68,14 @@ public static class WindowsPlatformServiceCollectionExtensions
         services.AddSingleton<ITelemetryProvider>(provider => new PerformanceCounterTelemetryProvider(
             provider.GetRequiredService<ILogger<PerformanceCounterTelemetryProvider>>(),
             provider.GetRequiredService<ISystemProfileProvider>()));
+
+        services.TryAddSingleton<IProcessInspector, WindowsProcessInspector>();
+        services.TryAddSingleton<IProcessController, WindowsProcessController>();
+
+        services.AddSingleton<IStateProvider>(provider => new ProcessStateProvider(
+            provider.GetRequiredService<IProcessInspector>(),
+            provider.GetRequiredService<IProcessController>(),
+            provider.GetRequiredService<ILogger<ProcessStateProvider>>()));
 
         services.AddSingleton<ITelemetryProvider>(provider => new GpuTelemetryProvider(
             provider.GetRequiredService<ILogger<GpuTelemetryProvider>>(),

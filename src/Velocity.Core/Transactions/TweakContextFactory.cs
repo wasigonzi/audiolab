@@ -93,7 +93,8 @@ public sealed class TweakContextFactory : ITweakContextFactory
         var probeContext = new TweakContext(
             profile, layout, probeAccessor, _privileges, CreateLogger(tweak.Descriptor.Id), options);
 
-        IReadOnlyList<StateKey> declaredKeys = tweak.GetStateKeys(probeContext);
+        IReadOnlyList<StateKey> declaredKeys =
+            await tweak.GetStateKeysAsync(probeContext, cancellationToken).ConfigureAwait(false);
 
         var accessor = new TransactionalStateAccessor(
             _stateProviders, _privileges, tweak.Descriptor.Id, declaredKeys);

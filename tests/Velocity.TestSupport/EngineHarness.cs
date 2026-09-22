@@ -93,11 +93,15 @@ public sealed class EngineHarness : IAsyncDisposable
     /// <param name="tweaks">Modules to register in the catalogue.</param>
     /// <param name="profile">Machine to run against; defaults to an Intel desktop fixture.</param>
     /// <param name="privilegeChannel">Privileges to report.</param>
+    /// <param name="extraProviders">
+    /// Additional state providers, for modules that address something other than the registry.
+    /// </param>
     /// <returns>The harness.</returns>
     public static async Task<EngineHarness> CreateAsync(
         IEnumerable<ITweak> tweaks,
         SystemProfile? profile = null,
-        PrivilegeChannel privilegeChannel = PrivilegeChannel.HelperService)
+        PrivilegeChannel privilegeChannel = PrivilegeChannel.HelperService,
+        IEnumerable<IStateProvider>? extraProviders = null)
     {
         SqliteConnectionFactory connectionFactory = SqliteConnectionFactory.CreateInMemory();
         var migrator = new DatabaseMigrator(connectionFactory, NullLogger<DatabaseMigrator>.Instance);
@@ -110,8 +114,13 @@ public sealed class EngineHarness : IAsyncDisposable
 
         var stateProvider = new InMemoryStateProvider();
         var registryState = new InMemoryStateProvider("registry");
-        var providerRegistry = new StateProviderRegistry(
-            new IStateProvider[] { stateProvider, registryState });
+        var providers = new List<IStateProvider> { stateProvider, registryState };
+        if (extraProviders is not null)
+        {
+            providers.AddRange(extraProviders);
+        }
+
+        var providerRegistry = new StateProviderRegistry(providers);
         var profileProvider = new FakeSystemProfileProvider(
             profile ?? MachineFixtures.ProfileFor(MachineFixtures.IntelDesktopEightCore()));
         var privileges = new FakePrivilegeContext(privilegeChannel);

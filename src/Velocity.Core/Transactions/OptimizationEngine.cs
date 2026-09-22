@@ -326,7 +326,8 @@ public sealed class OptimizationEngine : IOptimizationEngine
         {
             observation = await tweak.DetectAsync(context, cancellationToken).ConfigureAwait(false);
 
-            IReadOnlyList<StateKey> declaredKeys = tweak.GetStateKeys(context);
+            IReadOnlyList<StateKey> declaredKeys =
+                await tweak.GetStateKeysAsync(context, cancellationToken).ConfigureAwait(false);
             Guid? snapshotId = null;
 
             if (declaredKeys.Count > 0)

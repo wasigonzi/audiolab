@@ -122,12 +122,13 @@ public sealed class SchedulerQuantumTweakTests
     }
 
     [Fact]
-    public void ItDeclaresTheOneKeyItWrites()
+    public async Task ItDeclaresTheOneKeyItWrites()
     {
         var tweak = new SchedulerQuantumTweak();
         TweakContext context = Context(out _);
 
-        StateKey declared = Assert.Single(tweak.GetStateKeys(context));
+        StateKey declared = Assert.Single(
+            await tweak.GetStateKeysAsync(context, CancellationToken.None));
 
         Assert.Equal(Key, declared);
         Assert.Equal(
