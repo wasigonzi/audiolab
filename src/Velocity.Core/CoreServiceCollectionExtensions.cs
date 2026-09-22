@@ -5,6 +5,7 @@ using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.State;
 using Velocity.Core.Auditing;
 using Velocity.Core.Hardware;
+using Velocity.Core.Network;
 using Velocity.Core.State;
 using Velocity.Core.Telemetry;
 using Velocity.Core.Transactions;
@@ -42,6 +43,7 @@ public static class CoreServiceCollectionExtensions
         services.TryAddSingleton<IOptimizationEngine, OptimizationEngine>();
         services.TryAddSingleton<ICrashRecoveryService, CrashRecoveryService>();
         services.TryAddSingleton<IAppliedTweakReader, AppliedTweakReader>();
+        services.TryAddSingleton<Abstractions.Network.INetworkQualityProbe, PingNetworkQualityProbe>();
         services.TryAddSingleton<SystemMonitorOptions>();
         services.TryAddSingleton<Abstractions.Telemetry.ISystemMonitor>(provider => new SystemMonitor(
             provider.GetServices<Abstractions.Telemetry.ITelemetryProvider>(),

@@ -74,6 +74,9 @@ public sealed class WindowsNetworkProbe : INetworkProbe
                 PhysicalAddress = FormatMac(adapter.GetPhysicalAddress()),
                 DnsServers = properties.DnsAddresses.Select(address => address.ToString()).ToList(),
                 Capabilities = BuildCapabilities(keywords),
+                DriverRegistryPath = pathByInterfaceId.TryGetValue(adapter.Id, out string? driverPath)
+                    ? $@"HKLM\{driverPath}"
+                    : null,
             });
         }
 
@@ -95,14 +98,33 @@ public sealed class WindowsNetworkProbe : INetworkProbe
             InterruptModerationEnabled = ReadFlag(keywords, "*InterruptModeration"),
             EnergyEfficientEthernetEnabled = ReadFlag(keywords, "*EEE"),
 
-            // PnPCapabilities bit 24 (0x100) set means "do not allow the computer to turn off this
-            // device"; the absence of the value means Windows uses its default, which permits it.
-            PowerManagementEnabled = keywords.TryGetValue("PnPCapabilities", out string? capabilities) &&
-                                     int.TryParse(capabilities, NumberStyles.Integer,
-                                         CultureInfo.InvariantCulture, out int flags)
-                ? (flags & 0x100) == 0
-                : null,
+            PowerManagementEnabled = ReadPowerManagement(keywords),
             AdvancedProperties = keywords,
+        };
+    }
+
+    /// <summary>
+    /// Interprets <c>PnPCapabilities</c> conservatively.
+    /// </summary>
+    /// <remarks>
+    /// Absent means the driver uses the Windows default, which permits power management. Zero means
+    /// the same thing explicitly. 24 is the documented value for clearing both power management
+    /// checkboxes. Every other value is left unknown rather than decoded from bit positions this
+    /// product is not certain of, because reporting a guess as a fact is exactly what it must not do.
+    /// </remarks>
+    private static bool? ReadPowerManagement(Dictionary<string, string> keywords)
+    {
+        if (!keywords.TryGetValue("PnPCapabilities", out string? raw) ||
+            !int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
+        {
+            return true;
+        }
+
+        return value switch
+        {
+            0 => true,
+            24 => false,
+            _ => null,
         };
     }
 
@@ -118,9 +140,12 @@ public sealed class WindowsNetworkProbe : INetworkProbe
             ? parsed
             : null;
 
+    private readonly Dictionary<string, string> pathByInterfaceId = new(StringComparer.OrdinalIgnoreCase);
+
     private Dictionary<string, Dictionary<string, string>> ReadDriverKeywords()
     {
         var byInterfaceId = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        pathByInterfaceId.Clear();
 
         try
         {
@@ -162,6 +187,7 @@ public sealed class WindowsNetworkProbe : INetworkProbe
                 }
 
                 byInterfaceId[interfaceId] = keywords;
+                pathByInterfaceId[interfaceId] = $@"{NetworkClassPath}\{subKeyName}";
             }
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException)

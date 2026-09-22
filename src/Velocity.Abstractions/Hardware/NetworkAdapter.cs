@@ -40,7 +40,14 @@ public sealed record NetworkAdapterCapabilities
     /// <summary>Whether interrupt moderation is currently enabled.</summary>
     public bool? InterruptModerationEnabled { get; init; }
 
-    /// <summary>Whether the adapter is allowed to be powered down to save power.</summary>
+    /// <summary>
+    /// Whether Windows is allowed to power the adapter down.
+    /// </summary>
+    /// <remarks>
+    /// Only two values of <c>PnPCapabilities</c> are documented well enough to interpret: absent or
+    /// zero means power management is permitted, and 24 means both power management checkboxes are
+    /// cleared. Any other value is reported as unknown rather than guessed at from its bits.
+    /// </remarks>
     public bool? PowerManagementEnabled { get; init; }
 
     /// <summary>Whether Energy Efficient Ethernet is exposed and enabled.</summary>
@@ -86,4 +93,15 @@ public sealed record NetworkAdapter
 
     /// <summary>Driver exposed capabilities.</summary>
     public NetworkAdapterCapabilities Capabilities { get; init; } = new();
+
+    /// <summary>
+    /// Registry key holding this adapter's driver keywords, for example
+    /// <c>HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-...}\0012</c>.
+    /// </summary>
+    /// <remarks>
+    /// Carrying the location on the model is what lets a portable module address a keyword through
+    /// the ordinary registry provider, rather than needing a network specific state provider that
+    /// would have to re-enumerate the class key on every read.
+    /// </remarks>
+    public string? DriverRegistryPath { get; init; }
 }
