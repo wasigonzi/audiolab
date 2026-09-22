@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Velocity.Diagnostics\Velocity.Diagnostics.csproj" />
     <ProjectReference Include="..\Velocity.Platform.Windows\Velocity.Platform.Windows.csproj" />
     <ProjectReference Include="..\Velocity.Presentation\Velocity.Presentation.csproj" />
+    <ProjectReference Include="..\Velocity.Tweaks\Velocity.Tweaks.csproj" />
   </ItemGroup>
 
   <ItemGroup>

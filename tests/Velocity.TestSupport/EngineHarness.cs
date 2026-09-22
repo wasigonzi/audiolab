@@ -14,9 +14,8 @@ using Velocity.Core.Tweaks;
 using Velocity.Data;
 using Velocity.Data.Migrations;
 using Velocity.Data.Repositories;
-using Velocity.TestSupport;
 
-namespace Velocity.Core.Tests;
+namespace Velocity.TestSupport;
 
 /// <summary>
 /// Wires the real engine against a real SQLite database (in memory) and an in-memory state
@@ -27,13 +26,14 @@ namespace Velocity.Core.Tests;
 /// capture, rollback engine and recovery service under test are exactly the types that ship; only
 /// the machine underneath them is substituted.
 /// </remarks>
-internal sealed class EngineHarness : IAsyncDisposable
+public sealed class EngineHarness : IAsyncDisposable
 {
     private readonly SqliteConnectionFactory _connectionFactory;
 
     private EngineHarness(
         SqliteConnectionFactory connectionFactory,
         InMemoryStateProvider stateProvider,
+        InMemoryStateProvider registryState,
         ITransactionJournal journal,
         IAppliedTweakRepository appliedTweaks,
         IAuditRepository auditRepository,
@@ -45,6 +45,7 @@ internal sealed class EngineHarness : IAsyncDisposable
     {
         _connectionFactory = connectionFactory;
         StateProvider = stateProvider;
+        RegistryState = registryState;
         Journal = journal;
         AppliedTweaks = appliedTweaks;
         AuditRepository = auditRepository;
@@ -55,25 +56,45 @@ internal sealed class EngineHarness : IAsyncDisposable
         Recovery = recovery;
     }
 
-    internal InMemoryStateProvider StateProvider { get; }
+    /// <summary>The in-memory machine the engine writes to, under the <c>memory</c> scheme.</summary>
+    public InMemoryStateProvider StateProvider { get; }
 
-    internal ITransactionJournal Journal { get; }
+    /// <summary>
+    /// The same thing under the <c>registry</c> scheme, so a production module — which addresses
+    /// real registry keys — runs against the real engine with no Windows present.
+    /// </summary>
+    public InMemoryStateProvider RegistryState { get; }
 
-    internal IAppliedTweakRepository AppliedTweaks { get; }
+    /// <summary>The real SQLite journal.</summary>
+    public ITransactionJournal Journal { get; }
 
-    internal IAuditRepository AuditRepository { get; }
+    /// <summary>Record of what the engine has applied.</summary>
+    public IAppliedTweakRepository AppliedTweaks { get; }
 
-    internal ITweakRegistry Registry { get; }
+    /// <summary>Audit log storage.</summary>
+    public IAuditRepository AuditRepository { get; }
 
-    internal ITweakContextFactory ContextFactory { get; }
+    /// <summary>The catalogue built from the supplied modules.</summary>
+    public ITweakRegistry Registry { get; }
 
-    internal IRollbackEngine Rollback { get; }
+    /// <summary>Factory for module execution contexts.</summary>
+    public ITweakContextFactory ContextFactory { get; }
 
-    internal IOptimizationEngine Engine { get; }
+    /// <summary>The real rollback engine.</summary>
+    public IRollbackEngine Rollback { get; }
 
-    internal ICrashRecoveryService Recovery { get; }
+    /// <summary>The real transaction coordinator.</summary>
+    public IOptimizationEngine Engine { get; }
 
-    internal static async Task<EngineHarness> CreateAsync(
+    /// <summary>The real startup recovery service.</summary>
+    public ICrashRecoveryService Recovery { get; }
+
+    /// <summary>Builds a harness around the supplied modules.</summary>
+    /// <param name="tweaks">Modules to register in the catalogue.</param>
+    /// <param name="profile">Machine to run against; defaults to an Intel desktop fixture.</param>
+    /// <param name="privilegeChannel">Privileges to report.</param>
+    /// <returns>The harness.</returns>
+    public static async Task<EngineHarness> CreateAsync(
         IEnumerable<ITweak> tweaks,
         SystemProfile? profile = null,
         PrivilegeChannel privilegeChannel = PrivilegeChannel.HelperService)
@@ -88,7 +109,9 @@ internal sealed class EngineHarness : IAsyncDisposable
         var audit = new AuditSink(auditRepository, new PassThroughRedactor(), NullLogger<AuditSink>.Instance);
 
         var stateProvider = new InMemoryStateProvider();
-        var providerRegistry = new StateProviderRegistry(new IStateProvider[] { stateProvider });
+        var registryState = new InMemoryStateProvider("registry");
+        var providerRegistry = new StateProviderRegistry(
+            new IStateProvider[] { stateProvider, registryState });
         var profileProvider = new FakeSystemProfileProvider(
             profile ?? MachineFixtures.ProfileFor(MachineFixtures.IntelDesktopEightCore()));
         var privileges = new FakePrivilegeContext(privilegeChannel);
@@ -108,10 +131,11 @@ internal sealed class EngineHarness : IAsyncDisposable
             journal, rollback, audit, NullLogger<CrashRecoveryService>.Instance);
 
         return new EngineHarness(
-            connectionFactory, stateProvider, journal, appliedTweaks, auditRepository,
+            connectionFactory, stateProvider, registryState, journal, appliedTweaks, auditRepository,
             registry, contextFactory, rollback, engine, recovery);
     }
 
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
         _connectionFactory.Dispose();

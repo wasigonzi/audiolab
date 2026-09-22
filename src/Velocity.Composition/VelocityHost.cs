@@ -12,6 +12,7 @@ using Velocity.Data.Migrations;
 using Velocity.Diagnostics;
 using Velocity.Platform.Windows;
 using Velocity.Presentation;
+using Velocity.Tweaks;
 
 namespace Velocity.Composition;
 
@@ -52,6 +53,7 @@ public static class VelocityHost
         });
         services.AddVelocityData();
         services.AddVelocityCore();
+        services.AddVelocityTweaks();
         services.AddVelocityWindowsPlatform();
         services.AddVelocityPresentation();
 
