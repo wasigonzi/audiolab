@@ -413,6 +413,7 @@ public sealed class OptimizationEngine : IOptimizationEngine
                     Verification = verification.Status,
                     Observation = observation,
                     Message = apply.Message,
+                    VerificationMessage = verification.Message,
                     ChangedKeys = accessor.WrittenKeys.Select(key => key.ToString()).ToList(),
                 },
                 Succeeded: true,

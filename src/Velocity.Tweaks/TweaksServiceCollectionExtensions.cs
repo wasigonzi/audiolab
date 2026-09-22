@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Velocity.Abstractions.Tweaks;
 using Velocity.Tweaks.Cpu;
+using Velocity.Tweaks.Windows;
 
 namespace Velocity.Tweaks;
 
@@ -26,6 +27,8 @@ public static class TweaksServiceCollectionExtensions
         services.AddSingleton<ITweak, SchedulerQuantumTweak>();
         services.AddSingleton<ITweak, BackgroundProcessPriorityTweak>();
         services.AddSingleton<ITweak, GameCorePlacementTweak>();
+        services.AddSingleton<ITweak, GameRecordingTweak>();
+        services.AddSingleton<ITweak, SessionServiceTweak>();
 
         return services;
     }

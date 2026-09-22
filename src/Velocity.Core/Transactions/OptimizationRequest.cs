@@ -50,8 +50,18 @@ public sealed record TweakRunResult
     /// <summary>What the machine looked like before the change.</summary>
     public TweakObservation? Observation { get; init; }
 
-    /// <summary>Explanation for the log and the UI.</summary>
+    /// <summary>Explanation of what the apply did, for the log and the UI.</summary>
     public required string Message { get; init; }
+
+    /// <summary>
+    /// What verification observed, when it had something to add beyond the status.
+    /// </summary>
+    /// <remarks>
+    /// Kept separate from <see cref="Message"/> because the two answer different questions: the
+    /// apply message says what was attempted, and this says what the machine actually reported
+    /// afterwards. A step that applied cleanly but left one service running is only visible here.
+    /// </remarks>
+    public string? VerificationMessage { get; init; }
 
     /// <summary>State keys that were actually written.</summary>
     public IReadOnlyList<string> ChangedKeys { get; init; } = Array.Empty<string>();
