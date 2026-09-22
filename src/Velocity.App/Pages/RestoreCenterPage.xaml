@@ -1,0 +1,80 @@
+<Page
+    x:Class="Velocity.App.Pages.RestoreCenterPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="16" MaxWidth="1100">
+
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="Restore Centre" />
+
+            <InfoBar
+                IsOpen="{Binding EmptyMessage, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"
+                IsClosable="False"
+                Severity="Informational"
+                Message="{Binding EmptyMessage}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Refresh" Command="{Binding LoadCommand}" />
+                <Button Content="Restore everything" Command="{Binding RestoreAllCommand}" />
+            </StackPanel>
+
+            <Border Style="{StaticResource SubtleCardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Currently applied by Velocity" />
+                    <ItemsControl ItemsSource="{Binding CurrentlyApplied}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,3" Text="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding RestorePoints}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource GlassCardStyle}" Margin="0,0,0,12">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{Binding StartedAtUtc}" />
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding Reason}" />
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding Status}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button
+                                            Content="Restore"
+                                            IsEnabled="{Binding CanRestore}"
+                                            Command="{Binding DataContext.RestoreCommand, ElementName=RestoreRoot}"
+                                            CommandParameter="{Binding}" />
+                                        <Button
+                                            Content="Export"
+                                            Command="{Binding DataContext.ExportCommand, ElementName=RestoreRoot}"
+                                            CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding Steps}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

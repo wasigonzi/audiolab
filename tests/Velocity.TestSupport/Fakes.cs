@@ -171,3 +171,139 @@ public sealed class PassThroughRedactor : Velocity.Abstractions.Diagnostics.ISen
     /// <inheritdoc />
     public string Redact(string text) => text;
 }
+
+/// <summary>A telemetry monitor that publishes whatever a test hands it.</summary>
+public sealed class FakeSystemMonitor : Velocity.Abstractions.Telemetry.ISystemMonitor
+{
+    /// <inheritdoc />
+    public Velocity.Abstractions.Telemetry.TelemetrySample? Latest { get; private set; }
+
+    /// <inheritdoc />
+    public Velocity.Abstractions.Telemetry.MonitorCadence Cadence { get; private set; }
+        = Velocity.Abstractions.Telemetry.MonitorCadence.Stopped;
+
+    /// <inheritdoc />
+    public event EventHandler<Velocity.Abstractions.Telemetry.TelemetrySample>? SampleProduced;
+
+    /// <summary>Number of times the monitor was started.</summary>
+    public int StartCount { get; private set; }
+
+    /// <summary>Publishes a sample to every subscriber.</summary>
+    /// <param name="sample">Sample to publish.</param>
+    public void Publish(Velocity.Abstractions.Telemetry.TelemetrySample sample)
+    {
+        Latest = sample;
+        SampleProduced?.Invoke(this, sample);
+    }
+
+    /// <summary>Number of subscribers currently attached, used to assert clean disposal.</summary>
+    public int SubscriberCount => SampleProduced?.GetInvocationList().Length ?? 0;
+
+    /// <inheritdoc />
+    public Task StartAsync(
+        Velocity.Abstractions.Telemetry.MonitorCadence cadence,
+        CancellationToken cancellationToken)
+    {
+        StartCount++;
+        Cadence = cadence;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public void SetCadence(Velocity.Abstractions.Telemetry.MonitorCadence cadence) => Cadence = cadence;
+
+    /// <inheritdoc />
+    public Task StopAsync()
+    {
+        Cadence = Velocity.Abstractions.Telemetry.MonitorCadence.Stopped;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}
+
+/// <summary>An optimization engine that records what it was asked to do.</summary>
+public sealed class FakeOptimizationEngine : Velocity.Core.Transactions.IOptimizationEngine
+{
+    /// <summary>Requests the engine received, in order.</summary>
+    public List<Velocity.Core.Transactions.OptimizationRequest> Requests { get; } = new();
+
+    /// <summary>Result the engine returns. Defaults to a successful empty run.</summary>
+    public Velocity.Core.Transactions.OptimizationRunResult? Result { get; set; }
+
+    /// <summary>Results returned from detection.</summary>
+    public List<Velocity.Core.Transactions.TweakRunResult> DetectResults { get; } = new();
+
+    /// <inheritdoc />
+    public Task<Velocity.Core.Transactions.OptimizationRunResult> ApplyAsync(
+        Velocity.Core.Transactions.OptimizationRequest request,
+        CancellationToken cancellationToken)
+    {
+        Requests.Add(request);
+
+        return Task.FromResult(Result ?? new Velocity.Core.Transactions.OptimizationRunResult
+        {
+            TransactionId = Guid.NewGuid(),
+            Status = Velocity.Abstractions.Transactions.TransactionStatus.Applied,
+            Results = Array.Empty<Velocity.Core.Transactions.TweakRunResult>(),
+        });
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Velocity.Core.Transactions.TweakRunResult>> DetectAsync(
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Velocity.Core.Transactions.TweakRunResult>>(DetectResults);
+}
+
+/// <summary>A rollback engine that records what it was asked to undo.</summary>
+public sealed class FakeRollbackEngine : Velocity.Core.Transactions.IRollbackEngine
+{
+    /// <summary>Transactions the engine was asked to roll back.</summary>
+    public List<Guid> RolledBackTransactions { get; } = new();
+
+    /// <summary>Tweaks the engine was asked to roll back.</summary>
+    public List<string> RolledBackTweaks { get; } = new();
+
+    /// <summary>Result returned for a rollback, or null to report nothing to do.</summary>
+    public Velocity.Core.Transactions.RollbackResult? Result { get; set; }
+
+    /// <inheritdoc />
+    public Task<Velocity.Core.Transactions.RollbackResult> RollbackTransactionAsync(
+        Guid transactionId,
+        CancellationToken cancellationToken)
+    {
+        RolledBackTransactions.Add(transactionId);
+        return Task.FromResult(Result ?? new Velocity.Core.Transactions.RollbackResult(
+            transactionId, 1, new Dictionary<string, string>(StringComparer.Ordinal)));
+    }
+
+    /// <inheritdoc />
+    public Task<Velocity.Core.Transactions.RollbackResult?> RollbackLastAsync(
+        CancellationToken cancellationToken) => Task.FromResult(Result);
+
+    /// <inheritdoc />
+    public Task<Velocity.Core.Transactions.RollbackResult?> RollbackTweakAsync(
+        string tweakId,
+        CancellationToken cancellationToken)
+    {
+        RolledBackTweaks.Add(tweakId);
+        return Task.FromResult(Result);
+    }
+}
+
+/// <summary>An applied-tweak reader returning a fixed map.</summary>
+public sealed class FakeAppliedTweakReader : Velocity.Core.Transactions.IAppliedTweakReader
+{
+    private readonly Dictionary<string, string?> _values;
+
+    /// <summary>Creates the reader.</summary>
+    /// <param name="values">Original values keyed by tweak id.</param>
+    public FakeAppliedTweakReader(Dictionary<string, string?>? values = null) =>
+        _values = values ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyDictionary<string, string?>> GetAppliedOriginalValuesAsync(
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<string, string?>>(_values);
+}

@@ -1,17 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>$(TargetFrameworkWindows)</TargetFramework>
     <SupportedOSPlatformVersion>$(SupportedOSPlatformVersionWindows)</SupportedOSPlatformVersion>
-    <RootNamespace>Velocity.Cli</RootNamespace>
-    <AssemblyName>velocity</AssemblyName>
-    <Description>Headless host for the optimization engine. Used for support, automation and as the end to end test harness for the engine on real hardware.</Description>
+    <RootNamespace>Velocity.Composition</RootNamespace>
+    <Description>Composition root shared by the desktop application and the command line host, including the enforced startup order: migrate, then recover, then run.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
-    <ProjectReference Include="..\Velocity.Composition\Velocity.Composition.csproj" />
     <ProjectReference Include="..\Velocity.Core\Velocity.Core.csproj" />
     <ProjectReference Include="..\Velocity.Data\Velocity.Data.csproj" />
     <ProjectReference Include="..\Velocity.Diagnostics\Velocity.Diagnostics.csproj" />

@@ -20,19 +20,20 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet restore Velocity.sln
-      - run: dotnet build Velocity.sln --configuration Release --no-restore
-      - run: dotnet test Velocity.sln --configuration Release --no-build --logger "trx;LogFileName=results.trx"
+      # Velocity.Portable.slnf excludes the WinUI head, whose XAML compiler is a Windows
+      # executable. Everything else, including the Windows-targeted libraries, compiles here.
+      - run: dotnet restore Velocity.Portable.slnf
+      - run: dotnet build Velocity.Portable.slnf --configuration Release --no-restore
+      - run: dotnet test Velocity.Portable.slnf --configuration Release --no-build --logger "trx;LogFileName=results.trx"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-linux
           path: "**/TestResults/*.trx"
 
-  # The Windows leg is what proves the platform layer and the helper actually run, which the
-  # Linux leg cannot: it compiles them but cannot execute them.
+  # The Windows leg is the only one that can build the WinUI head and run the platform layer.
   windows:
-    name: build (windows)
+    name: build and test (windows)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

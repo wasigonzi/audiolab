@@ -6,6 +6,7 @@ using Velocity.Abstractions.State;
 using Velocity.Core.Auditing;
 using Velocity.Core.Hardware;
 using Velocity.Core.State;
+using Velocity.Core.Telemetry;
 using Velocity.Core.Transactions;
 using Velocity.Core.Tweaks;
 
@@ -40,6 +41,13 @@ public static class CoreServiceCollectionExtensions
         services.TryAddSingleton<IRollbackEngine, RollbackEngine>();
         services.TryAddSingleton<IOptimizationEngine, OptimizationEngine>();
         services.TryAddSingleton<ICrashRecoveryService, CrashRecoveryService>();
+        services.TryAddSingleton<IAppliedTweakReader, AppliedTweakReader>();
+        services.TryAddSingleton<SystemMonitorOptions>();
+        services.TryAddSingleton<Abstractions.Telemetry.ISystemMonitor>(provider => new SystemMonitor(
+            provider.GetServices<Abstractions.Telemetry.ITelemetryProvider>(),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SystemMonitor>>(),
+            provider.GetRequiredService<SystemMonitorOptions>(),
+            provider.GetRequiredService<TimeProvider>()));
 
         return services;
     }

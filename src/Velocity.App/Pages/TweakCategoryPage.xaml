@@ -1,0 +1,109 @@
+<Page
+    x:Class="Velocity.App.Pages.TweakCategoryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="16" MaxWidth="1100">
+
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{Binding Category}" />
+
+            <InfoBar
+                IsOpen="{Binding EmptyMessage, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"
+                IsClosable="False"
+                Severity="Informational"
+                Message="{Binding EmptyMessage}" />
+
+            <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource GlassCardStyle}" Margin="0,0,0,12">
+                            <StackPanel Spacing="12">
+
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{Binding Name}" />
+                                        <TextBlock Style="{StaticResource BodyStyle}" Text="{Binding Summary}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                        <Button Content="Apply" Command="{Binding DataContext.ApplyCommand, ElementName=PageRoot}" CommandParameter="{Binding}" IsEnabled="{Binding CanApply}" />
+                                        <Button Content="Restore" Command="{Binding DataContext.RestoreCommand, ElementName=PageRoot}" CommandParameter="{Binding}" IsEnabled="{Binding CanRestore}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Current versus recommended, always visible. -->
+                                <Grid ColumnSpacing="24">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Now" />
+                                        <TextBlock Style="{StaticResource BodyStyle}" Text="{Binding CurrentValue}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Recommended" />
+                                        <TextBlock Style="{StaticResource BodyStyle}" Text="{Binding RecommendedValue}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Risk" />
+                                        <TextBlock
+                                            Style="{StaticResource BodyStyle}"
+                                            Foreground="{Binding Risk, Converter={StaticResource RiskToBrushKeyConverter}}"
+                                            Text="{Binding Risk}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock
+                                    Style="{StaticResource CaptionStyle}"
+                                    Text="{Binding Compatibility, Converter={StaticResource CompatibilityToTextConverter}}" />
+                                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding CompatibilityReason}" />
+                                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding ExpectedEffect}" />
+
+                                <!-- Expert Mode: the real location, the captured original, the technical note. -->
+                                <Expander
+                                    HorizontalAlignment="Stretch"
+                                    Header="Technical detail"
+                                    Visibility="{Binding DataContext.ShowExpertDetail, ElementName=PageRoot, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Style="{StaticResource BodyStyle}" Text="{Binding TechnicalDescription}" />
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="State this module reads and writes:" />
+                                        <ItemsControl ItemsSource="{Binding StateKeys}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock
+                                                        FontFamily="Consolas"
+                                                        Style="{StaticResource CaptionStyle}"
+                                                        IsTextSelectionEnabled="True"
+                                                        Text="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding OriginalValue}" />
+                                        <ItemsControl ItemsSource="{Binding Details}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

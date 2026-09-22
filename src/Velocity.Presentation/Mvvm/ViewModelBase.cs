@@ -101,7 +101,16 @@ public abstract partial class ViewModelBase : ObservableObject, IDisposable
 
         _disposed = true;
         _lifetime.Cancel();
+        DisposeCore();
         _lifetime.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases resources a derived view model owns. Called after the lifetime token is cancelled
+    /// and before it is disposed, so an override can unsubscribe from long lived services.
+    /// </summary>
+    protected virtual void DisposeCore()
+    {
     }
 }

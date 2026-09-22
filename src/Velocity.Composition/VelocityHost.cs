@@ -13,11 +13,10 @@ using Velocity.Diagnostics;
 using Velocity.Platform.Windows;
 using Velocity.Presentation;
 
-namespace Velocity.Cli;
+namespace Velocity.Composition;
 
 /// <summary>
-/// Builds the composition root shared by the command line host and, from Phase 2, the desktop
-/// application.
+/// Builds the composition root shared by the desktop application and the command line host.
 /// </summary>
 /// <remarks>
 /// The startup order matters and is enforced here rather than left to each host: the database is
@@ -31,12 +30,21 @@ public static class VelocityHost
     /// <summary>Builds the service provider.</summary>
     /// <param name="paths">Filesystem layout to use, or <see langword="null"/> for the default.</param>
     /// <param name="writeToConsole">Whether log output should also go to the console.</param>
+    /// <param name="configureServices">
+    /// Host specific registrations, applied before the standard ones. The desktop application uses
+    /// it to supply a real UI dispatcher; because every layer registers with TryAdd, whatever a
+    /// host registers here wins.
+    /// </param>
     /// <returns>The configured provider.</returns>
-    public static ServiceProvider Build(IVelocityPaths? paths = null, bool writeToConsole = true)
+    public static ServiceProvider Build(
+        IVelocityPaths? paths = null,
+        bool writeToConsole = true,
+        Action<IServiceCollection>? configureServices = null)
     {
         IVelocityPaths resolvedPaths = paths ?? new VelocityPaths();
 
         var services = new ServiceCollection();
+        configureServices?.Invoke(services);
         services.AddVelocityDiagnostics(resolvedPaths, options =>
         {
             options.WriteToConsole = writeToConsole;

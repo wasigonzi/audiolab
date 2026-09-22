@@ -1,0 +1,117 @@
+<!--
+    The visual system: a dark, translucent surface language built on the Windows material stack
+    rather than on hand-rolled blur. Mica behind the window, layered translucent cards on top,
+    one accent gradient, generous corner radius, restrained motion.
+
+    Colours are defined once here and referenced everywhere, so a theme change is a change to this
+    file and nothing else.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Palette -->
+    <Color x:Key="SurfaceColor">#12141A</Color>
+    <Color x:Key="SurfaceElevatedColor">#191C24</Color>
+    <Color x:Key="StrokeColor">#2A2F3A</Color>
+    <Color x:Key="AccentStartColor">#4F7CFF</Color>
+    <Color x:Key="AccentEndColor">#8A5CFF</Color>
+    <Color x:Key="PositiveColor">#3DD68C</Color>
+    <Color x:Key="CautionColor">#F5B544</Color>
+    <Color x:Key="NegativeColor">#F2555A</Color>
+    <Color x:Key="TextPrimaryColor">#F2F4F8</Color>
+    <Color x:Key="TextSecondaryColor">#98A1B3</Color>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="StrokeBrush" Color="{StaticResource StrokeColor}" />
+    <SolidColorBrush x:Key="PositiveBrush" Color="{StaticResource PositiveColor}" />
+    <SolidColorBrush x:Key="CautionBrush" Color="{StaticResource CautionColor}" />
+    <SolidColorBrush x:Key="NegativeBrush" Color="{StaticResource NegativeColor}" />
+
+    <LinearGradientBrush x:Key="AccentBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentStartColor}" Offset="0" />
+        <GradientStop Color="{StaticResource AccentEndColor}" Offset="1" />
+    </LinearGradientBrush>
+
+    <!--
+        The glass surface. AcrylicBrush is used rather than a blurred image because it is composited
+        by the system: it costs the application nothing per frame, which matters for a tool that
+        must stay quiet while a game runs.
+    -->
+    <AcrylicBrush
+        x:Key="GlassBrush"
+        TintColor="{StaticResource SurfaceElevatedColor}"
+        TintOpacity="0.55"
+        TintLuminosityOpacity="0.45"
+        FallbackColor="{StaticResource SurfaceElevatedColor}" />
+
+    <AcrylicBrush
+        x:Key="GlassBrushSubtle"
+        TintColor="{StaticResource SurfaceColor}"
+        TintOpacity="0.4"
+        TintLuminosityOpacity="0.35"
+        FallbackColor="{StaticResource SurfaceColor}" />
+
+    <Thickness x:Key="CardPadding">20</Thickness>
+    <CornerRadius x:Key="CardCornerRadius">12</CornerRadius>
+
+    <!-- A translucent panel. Everything on a page sits inside one of these. -->
+    <Style x:Key="GlassCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource GlassBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource CardCornerRadius}" />
+        <Setter Property="Padding" Value="{StaticResource CardPadding}" />
+    </Style>
+
+    <Style x:Key="SubtleCardStyle" TargetType="Border" BasedOn="{StaticResource GlassCardStyle}">
+        <Setter Property="Background" Value="{StaticResource GlassBrushSubtle}" />
+    </Style>
+
+    <!-- Typography -->
+    <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="34" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style x:Key="CaptionStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="BodyStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- The single primary action on the dashboard. -->
+    <Style x:Key="PrimaryActionStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="Padding" Value="40,18" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+</ResourceDictionary>

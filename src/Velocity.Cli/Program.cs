@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.Transactions;
 using Velocity.Abstractions.Tweaks;
+using Velocity.Composition;
 using Velocity.Core.Hardware;
 using Velocity.Core.Transactions;
 using Velocity.Core.Tweaks;

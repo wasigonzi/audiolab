@@ -6,9 +6,11 @@ using Microsoft.Extensions.Logging;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.Privileges;
 using Velocity.Abstractions.State;
+using Velocity.Abstractions.Telemetry;
 using Velocity.Platform.Windows.Ipc;
 using Velocity.Platform.Windows.Privileges;
 using Velocity.Platform.Windows.Probes;
+using Velocity.Platform.Windows.Telemetry;
 using Velocity.Platform.Windows.State;
 
 namespace Velocity.Platform.Windows;
@@ -59,6 +61,14 @@ public static class WindowsPlatformServiceCollectionExtensions
             provider.GetRequiredService<IPrivilegeContext>(),
             provider.GetRequiredService<ILogger<RegistryStateProvider>>(),
             provider.GetRequiredService<IPrivilegedChannel>()));
+
+        services.AddSingleton<ITelemetryProvider>(provider => new PerformanceCounterTelemetryProvider(
+            provider.GetRequiredService<ILogger<PerformanceCounterTelemetryProvider>>(),
+            provider.GetRequiredService<ISystemProfileProvider>()));
+
+        services.AddSingleton<ITelemetryProvider>(provider => new GpuTelemetryProvider(
+            provider.GetRequiredService<ILogger<GpuTelemetryProvider>>(),
+            provider.GetRequiredService<TimeProvider>()));
 
         return services;
     }

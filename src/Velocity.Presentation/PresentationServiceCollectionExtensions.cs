@@ -28,6 +28,9 @@ public static class PresentationServiceCollectionExtensions
 
         services.TryAddTransient<ShellViewModel>();
         services.TryAddTransient<SystemInformationViewModel>();
+        services.TryAddTransient<DashboardViewModel>();
+        services.TryAddTransient<TweakCategoryViewModel>();
+        services.TryAddTransient<RestoreCenterViewModel>();
 
         return services;
     }
@@ -38,7 +41,20 @@ public static class PresentationServiceCollectionExtensions
     public static INavigationService RegisterVelocityRoutes(this INavigationService navigation)
     {
         ArgumentNullException.ThrowIfNull(navigation);
+
+        navigation.Register<DashboardViewModel>(NavigationCatalogue.DashboardRoute);
         navigation.Register<SystemInformationViewModel>(NavigationCatalogue.SystemInformationRoute);
+        navigation.Register<RestoreCenterViewModel>(NavigationCatalogue.RestoreCentreRoute);
+
+        // Every tweak category is served by the same page; the route carries which one.
+        foreach (NavigationItem item in NavigationCatalogue.Build())
+        {
+            if (item.Category is not null)
+            {
+                navigation.Register<TweakCategoryViewModel>(item.Key);
+            }
+        }
+
         return navigation;
     }
 }
