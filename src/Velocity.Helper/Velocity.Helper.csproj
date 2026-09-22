@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(TargetFrameworkWindows)</TargetFramework>
+    <SupportedOSPlatformVersion>$(SupportedOSPlatformVersionWindows)</SupportedOSPlatformVersion>
+    <RootNamespace>Velocity.Helper</RootNamespace>
+    <AssemblyName>Velocity.Helper</AssemblyName>
+    <Description>Privileged helper service. Performs the small set of elevated operations the desktop application is not allowed to perform itself.</Description>
+    <!-- The service must not present any UI, ever. -->
+    <UseWindowsForms>false</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\Velocity.Diagnostics\Velocity.Diagnostics.csproj" />
+    <ProjectReference Include="..\Velocity.Ipc\Velocity.Ipc.csproj" />
+    <ProjectReference Include="..\Velocity.Platform.Windows\Velocity.Platform.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+  </ItemGroup>
+
+</Project>

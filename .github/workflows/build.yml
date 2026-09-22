@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The portable projects hold every decision the product makes, so the fast leg runs on Linux
+  # and is the one that gates a change.
+  portable:
+    name: build and test (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore Velocity.sln
+      - run: dotnet build Velocity.sln --configuration Release --no-restore
+      - run: dotnet test Velocity.sln --configuration Release --no-build --logger "trx;LogFileName=results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-linux
+          path: "**/TestResults/*.trx"
+
+  # The Windows leg is what proves the platform layer and the helper actually run, which the
+  # Linux leg cannot: it compiles them but cannot execute them.
+  windows:
+    name: build (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore Velocity.sln
+      - run: dotnet build Velocity.sln --configuration Release --no-restore
+      - run: dotnet test Velocity.sln --configuration Release --no-build
+      - name: Describe the runner through the engine
+        run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- info

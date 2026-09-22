@@ -1,0 +1,28 @@
+## Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+publish/
+*.binlog
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## Test / coverage
+TestResults/
+coverage*.json
+coverage*.xml
+*.trx
+
+## Local runtime data (SQLite database, logs, snapshots)
+*.db
+*.db-shm
+*.db-wal
+logs/
+local/

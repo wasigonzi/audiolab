@@ -1,0 +1,85 @@
+using System;
+using System.Runtime.Versioning;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Velocity.Abstractions.Hardware;
+using Velocity.Abstractions.Privileges;
+using Velocity.Abstractions.State;
+using Velocity.Platform.Windows.Ipc;
+using Velocity.Platform.Windows.Privileges;
+using Velocity.Platform.Windows.Probes;
+using Velocity.Platform.Windows.State;
+
+namespace Velocity.Platform.Windows;
+
+/// <summary>Registers the Windows implementations of the platform contracts.</summary>
+public static class WindowsPlatformServiceCollectionExtensions
+{
+    /// <summary>
+    /// Adds the hardware probes, the registry state provider, the privilege context and the client
+    /// side of the privileged channel.
+    /// </summary>
+    /// <param name="services">Service collection to add to.</param>
+    /// <param name="configurePipe">Optional named pipe configuration.</param>
+    /// <returns>The same service collection.</returns>
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddVelocityWindowsPlatform(
+        this IServiceCollection services,
+        Action<NamedPipeChannelOptions>? configurePipe = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var pipeOptions = new NamedPipeChannelOptions();
+        configurePipe?.Invoke(pipeOptions);
+        services.TryAddSingleton(pipeOptions);
+
+        services.TryAddSingleton<IPrivilegedChannel, NamedPipePrivilegedChannel>();
+
+        services.TryAddSingleton<IPrivilegeContext>(provider =>
+        {
+            // The availability probe is a callback rather than a snapshot because the helper
+            // service can be started or stopped while the application is running.
+            IPrivilegedChannel channel = provider.GetRequiredService<IPrivilegedChannel>();
+            return new WindowsPrivilegeContext(() => channel.IsAvailable);
+        });
+
+        services.TryAddSingleton<ICpuTopologyProbe, WindowsCpuTopologyProbe>();
+        services.TryAddSingleton<IOperatingSystemProbe, WindowsOperatingSystemProbe>();
+        services.TryAddSingleton<IMemoryProbe, WindowsMemoryProbe>();
+        services.TryAddSingleton<IGpuProbe, WindowsGpuProbe>();
+        services.TryAddSingleton<IStorageProbe, WindowsStorageProbe>();
+        services.TryAddSingleton<INetworkProbe, WindowsNetworkProbe>();
+        services.TryAddSingleton<IDisplayProbe, WindowsDisplayProbe>();
+        services.TryAddSingleton<IPowerProbe, WindowsPowerProbe>();
+        services.TryAddSingleton<IPlatformSecurityProbe, WindowsPlatformSecurityProbe>();
+        services.TryAddSingleton<IMachineKindProbe, WindowsMachineKindProbe>();
+
+        services.AddSingleton<IStateProvider>(provider => new RegistryStateProvider(
+            provider.GetRequiredService<IPrivilegeContext>(),
+            provider.GetRequiredService<ILogger<RegistryStateProvider>>(),
+            provider.GetRequiredService<IPrivilegedChannel>()));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the platform services needed inside the privileged helper: the same registry provider,
+    /// but performing writes directly instead of forwarding them to itself.
+    /// </summary>
+    /// <param name="services">Service collection to add to.</param>
+    /// <returns>The same service collection.</returns>
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddVelocityWindowsHelperPlatform(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton<IPrivilegeContext>(_ => new WindowsPrivilegeContext(() => false));
+        services.AddSingleton<IStateProvider>(provider => new RegistryStateProvider(
+            provider.GetRequiredService<IPrivilegeContext>(),
+            provider.GetRequiredService<ILogger<RegistryStateProvider>>(),
+            channel: null));
+
+        return services;
+    }
+}
