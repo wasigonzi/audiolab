@@ -233,6 +233,70 @@ public static class PrivilegedOperationPolicy
         return PolicyDecision.Allow("Reads are permitted outside the credential hives.");
     }
 
+    /// <summary>
+    /// Power settings a privileged write may target, with the purpose that justifies each one.
+    /// </summary>
+    /// <remarks>
+    /// Power settings are allow-listed by GUID rather than by subgroup. A subgroup level rule would
+    /// hand the helper the whole processor policy, including settings with real safety implications
+    /// such as the thermal throttle policy. Each entry here corresponds to a shipping module.
+    /// </remarks>
+    private static readonly (string Subgroup, string Setting, string Purpose)[] PowerWriteAllowList =
+    [
+        ("54533251-82be-4824-96c1-47b60b740d00", "893dee8e-2bef-41e0-89c6-b55d0929964c",
+            "minimum processor state"),
+        ("54533251-82be-4824-96c1-47b60b740d00", "bc5038f7-23e0-4960-96da-33abaf5935ec",
+            "maximum processor state"),
+        ("54533251-82be-4824-96c1-47b60b740d00", "be337238-0d82-4146-a960-4f3749d470c7",
+            "processor performance boost mode"),
+        ("501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b-b6da-e5fa1a576df5",
+            "PCI Express link state power management"),
+    ];
+
+    /// <summary>Decides whether a power scheme may be activated.</summary>
+    /// <param name="schemeGuid">Scheme the caller wants to activate, in any GUID format.</param>
+    /// <returns>The decision.</returns>
+    /// <remarks>
+    /// Activating an existing scheme cannot elevate anyone: it selects between policies Windows
+    /// already holds, and <c>PowerSetActiveScheme</c> fails for a scheme that does not exist. The
+    /// check here is therefore about well formed input rather than about which plan is chosen,
+    /// because refusing the user's own custom plan would make the restore path unable to put it
+    /// back.
+    /// </remarks>
+    public static PolicyDecision AuthorizePowerSchemeActivation(string? schemeGuid) =>
+        Guid.TryParse(schemeGuid, out Guid parsed) && parsed != Guid.Empty
+            ? PolicyDecision.Allow("Selecting between power schemes Windows already holds is permitted.")
+            : PolicyDecision.Deny($"'{schemeGuid}' is not a power scheme GUID.");
+
+    /// <summary>Decides whether one AC power setting value may be written.</summary>
+    /// <param name="subgroupGuid">Setting subgroup, in any GUID format.</param>
+    /// <param name="settingGuid">Setting, in any GUID format.</param>
+    /// <returns>The decision.</returns>
+    public static PolicyDecision AuthorizePowerSettingWrite(string? subgroupGuid, string? settingGuid)
+    {
+        if (!Guid.TryParse(subgroupGuid, out Guid subgroup) || !Guid.TryParse(settingGuid, out Guid setting))
+        {
+            return PolicyDecision.Deny("Subgroup and setting must both be GUIDs.");
+        }
+
+        foreach ((string allowedSubgroup, string allowedSetting, string purpose) in PowerWriteAllowList)
+        {
+            if (subgroup == new Guid(allowedSubgroup) && setting == new Guid(allowedSetting))
+            {
+                return PolicyDecision.Allow($"Permitted by the allow list entry for {purpose}.");
+            }
+        }
+
+        return PolicyDecision.Deny(
+            $"Power setting '{setting:D}' is not in the privileged write allow list. Add an allow list " +
+            "entry with a documented purpose before a module can write it.");
+    }
+
+    /// <summary>The documented power write allow list, exposed for the Expert Mode policy viewer.</summary>
+    /// <returns>Each permitted setting with the purpose that justifies it.</returns>
+    public static IReadOnlyList<(string Subgroup, string Setting, string Purpose)> DescribePowerWriteAllowList() =>
+        PowerWriteAllowList;
+
     /// <summary>The documented write allow list, exposed for the Expert Mode policy viewer.</summary>
     /// <returns>Each permitted prefix with the purpose that justifies it.</returns>
     public static IReadOnlyList<(string Prefix, string Purpose)> DescribeWriteAllowList() => WriteAllowList;

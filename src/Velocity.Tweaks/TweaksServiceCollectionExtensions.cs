@@ -2,7 +2,9 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Velocity.Abstractions.Tweaks;
 using Velocity.Tweaks.Cpu;
+using Velocity.Tweaks.Gpu;
 using Velocity.Tweaks.Network;
+using Velocity.Tweaks.Power;
 using Velocity.Tweaks.Windows;
 
 namespace Velocity.Tweaks;
@@ -33,6 +35,8 @@ public static class TweaksServiceCollectionExtensions
         services.AddSingleton<ITweak, AdapterPowerManagementTweak>();
         services.AddSingleton<ITweak, EnergyEfficientEthernetTweak>();
         services.AddSingleton<ITweak, InterruptModerationTweak>();
+        services.AddSingleton<ITweak, PowerPlanTweak>();
+        services.AddSingleton<ITweak, HardwareSchedulingTweak>();
 
         return services;
     }

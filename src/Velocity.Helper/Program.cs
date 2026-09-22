@@ -21,9 +21,9 @@ namespace Velocity.Helper;
 /// <remarks>
 /// <para>
 /// The helper exists so the desktop application never has to run elevated. It is deliberately
-/// small: it exposes four operations, applies a policy to each one, and has no user interface, no
-/// network access and no plug-in surface. Everything that can be decided without elevation is
-/// decided in the desktop process.
+/// small: it exposes a short, fixed list of operations, applies a policy to each one, and has no
+/// user interface, no network access and no plug-in surface. Everything that can be decided
+/// without elevation is decided in the desktop process.
 /// </para>
 /// <para>
 /// It runs as a Windows service in an installed deployment and as a console application during
@@ -55,6 +55,10 @@ public static class Program
         builder.Services.AddSingleton<IIpcRequestHandler, GetIdentityHandler>();
         builder.Services.AddSingleton<IIpcRequestHandler, RegistryReadHandler>();
         builder.Services.AddSingleton<IIpcRequestHandler, RegistryWriteHandler>();
+        builder.Services.AddSingleton<IIpcRequestHandler, PowerGetActiveSchemeHandler>();
+        builder.Services.AddSingleton<IIpcRequestHandler, PowerSetActiveSchemeHandler>();
+        builder.Services.AddSingleton<IIpcRequestHandler, PowerReadAcValueHandler>();
+        builder.Services.AddSingleton<IIpcRequestHandler, PowerWriteAcValueHandler>();
 
         builder.Services.AddSingleton(provider => new IpcServer(
             provider.GetServices<IIpcRequestHandler>(),

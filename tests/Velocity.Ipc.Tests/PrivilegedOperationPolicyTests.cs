@@ -175,4 +175,65 @@ public sealed class PrivilegedOperationPolicyTests
                 prefix.Equals(entry.Prefix, StringComparison.OrdinalIgnoreCase));
         }
     }
+    [Fact]
+    public void ThePowerAllowListPermitsTheProcessorStateSettings()
+    {
+        Assert.True(PrivilegedOperationPolicy.AuthorizePowerSettingWrite(
+            "54533251-82be-4824-96c1-47b60b740d00",
+            "893dee8e-2bef-41e0-89c6-b55d0929964c").Allowed);
+
+        Assert.True(PrivilegedOperationPolicy.AuthorizePowerSettingWrite(
+            "54533251-82be-4824-96c1-47b60b740d00",
+            "bc5038f7-23e0-4960-96da-33abaf5935ec").Allowed);
+    }
+
+    [Fact]
+    public void AnUnlistedSettingInAnAllowedSubgroupIsStillRefused()
+    {
+        // The processor subgroup also holds the thermal throttle policy. Allow-listing by subgroup
+        // would hand that over with the rest.
+        PolicyDecision decision = PrivilegedOperationPolicy.AuthorizePowerSettingWrite(
+            "54533251-82be-4824-96c1-47b60b740d00",
+            "68dd2f27-a4ce-4e11-8487-3794e4135dfa");
+
+        Assert.False(decision.Allowed);
+        Assert.Contains("not in the privileged write allow list", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void APowerSettingWriteWithNonGuidArgumentsIsRefused()
+    {
+        Assert.False(PrivilegedOperationPolicy.AuthorizePowerSettingWrite("processor", "max").Allowed);
+        Assert.False(PrivilegedOperationPolicy.AuthorizePowerSettingWrite(null, null).Allowed);
+    }
+
+    [Fact]
+    public void AnyRealSchemeMayBeActivatedSoARestoreCanPutTheUsersPlanBack()
+    {
+        Assert.True(PrivilegedOperationPolicy
+            .AuthorizePowerSchemeActivation("11111111-2222-3333-4444-555555555555").Allowed);
+    }
+
+    [Fact]
+    public void AMalformedOrEmptySchemeGuidIsRefused()
+    {
+        Assert.False(PrivilegedOperationPolicy.AuthorizePowerSchemeActivation("high performance").Allowed);
+        Assert.False(PrivilegedOperationPolicy
+            .AuthorizePowerSchemeActivation("00000000-0000-0000-0000-000000000000").Allowed);
+    }
+
+    [Fact]
+    public void EveryPowerAllowListEntryCarriesAPurpose()
+    {
+        Assert.NotEmpty(PrivilegedOperationPolicy.DescribePowerWriteAllowList());
+
+        foreach ((string subgroup, string setting, string purpose) in
+                 PrivilegedOperationPolicy.DescribePowerWriteAllowList())
+        {
+            Assert.True(Guid.TryParse(subgroup, out _));
+            Assert.True(Guid.TryParse(setting, out _));
+            Assert.False(string.IsNullOrWhiteSpace(purpose));
+        }
+    }
+
 }

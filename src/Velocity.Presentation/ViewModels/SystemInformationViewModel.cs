@@ -9,6 +9,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Velocity.Abstractions.Hardware;
+using Velocity.Abstractions.Processes;
+using Velocity.Core.Advisory;
 using Velocity.Core.Hardware;
 using Velocity.Presentation.Mvvm;
 
@@ -36,15 +38,24 @@ public sealed record SystemFactGroup(string Title, IReadOnlyList<SystemFact> Fac
 public sealed partial class SystemInformationViewModel : ViewModelBase
 {
     private readonly ISystemProfileProvider _profileProvider;
+    private readonly IProcessInspector? _processes;
 
     /// <summary>Creates the view model.</summary>
     /// <param name="profileProvider">Source of the machine profile.</param>
     /// <param name="logger">Logger.</param>
+    /// <param name="processes">
+    /// Process inspector used to attribute memory pressure, when one is available. Findings are
+    /// produced without it; they simply do not name the applications responsible.
+    /// </param>
     public SystemInformationViewModel(
         ISystemProfileProvider profileProvider,
-        ILogger<SystemInformationViewModel> logger)
-        : base(logger) =>
+        ILogger<SystemInformationViewModel> logger,
+        IProcessInspector? processes = null)
+        : base(logger)
+    {
         _profileProvider = profileProvider ?? throw new ArgumentNullException(nameof(profileProvider));
+        _processes = processes;
+    }
 
     /// <summary>Fact groups shown on the page.</summary>
     public ObservableCollection<SystemFactGroup> Groups { get; } = new();
@@ -59,6 +70,15 @@ public sealed partial class SystemInformationViewModel : ViewModelBase
     /// <summary>Probes that failed, with the reason.</summary>
     public ObservableCollection<string> ProbeFailures { get; } = new();
 
+    /// <summary>
+    /// Observations about the machine that no setting in this product can fix, most severe first.
+    /// </summary>
+    /// <remarks>
+    /// A monitor running below its refresh rate or Windows installed on a mechanical disk outweighs
+    /// every tweak here, so these are shown alongside the facts rather than buried in a report.
+    /// </remarks>
+    public ObservableCollection<SystemFinding> Findings { get; } = new();
+
     /// <summary>Loads or reloads the machine profile.</summary>
     /// <param name="forceRefresh">Whether to re-probe rather than use the cached profile.</param>
     /// <returns>A task that completes when the page is populated.</returns>
@@ -72,6 +92,16 @@ public sealed partial class SystemInformationViewModel : ViewModelBase
 
             CpuLayout layout = CpuTopologyAnalyzer.Analyze(profile.Cpu);
             Populate(profile, layout);
+
+            IReadOnlyList<ProcessSnapshot>? processes = _processes is null
+                ? null
+                : await _processes.GetProcessesAsync(token).ConfigureAwait(true);
+
+            Findings.Clear();
+            foreach (SystemFinding finding in SystemAdvisor.Analyze(profile, processes))
+            {
+                Findings.Add(finding);
+            }
         },
         "Reading hardware information");
 

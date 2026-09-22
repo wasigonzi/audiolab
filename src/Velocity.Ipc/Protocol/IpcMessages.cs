@@ -27,6 +27,24 @@ public static class IpcOperations
     /// Arguments: <c>hive</c>, <c>path</c>, <c>name</c>, <c>kind</c>, <c>data</c>.
     /// </summary>
     public const string RegistryWrite = "registry.write";
+
+    /// <summary>Returns the active power scheme GUID. Takes no arguments.</summary>
+    public const string PowerGetActiveScheme = "power.get-active-scheme";
+
+    /// <summary>Activates a power scheme. Argument: <c>scheme</c>.</summary>
+    public const string PowerSetActiveScheme = "power.set-active-scheme";
+
+    /// <summary>
+    /// Reads one AC power setting value index.
+    /// Arguments: <c>scheme</c>, <c>subgroup</c>, <c>setting</c>.
+    /// </summary>
+    public const string PowerReadAcValue = "power.read-ac-value";
+
+    /// <summary>
+    /// Writes one AC power setting value index.
+    /// Arguments: <c>scheme</c>, <c>subgroup</c>, <c>setting</c>, <c>value</c>.
+    /// </summary>
+    public const string PowerWriteAcValue = "power.write-ac-value";
 }
 
 /// <summary>Error codes a helper can return.</summary>

@@ -172,6 +172,28 @@ internal static partial class NativeMethods
         in Guid powerSettingGuid,
         out uint value);
 
+    /// <summary>Writes an AC power setting value index.</summary>
+    /// <param name="rootPowerKey">Reserved; must be <see cref="IntPtr.Zero"/>.</param>
+    /// <param name="schemeGuid">Scheme to write to.</param>
+    /// <param name="subGroupOfPowerSettingsGuid">Setting subgroup.</param>
+    /// <param name="powerSettingGuid">Setting.</param>
+    /// <param name="value">Value index to write.</param>
+    /// <returns><see cref="ErrorSuccess"/> on success, otherwise a Win32 error code.</returns>
+    [LibraryImport(PowrProf, EntryPoint = "PowerWriteACValueIndex")]
+    internal static partial uint PowerWriteACValueIndex(
+        IntPtr rootPowerKey,
+        in Guid schemeGuid,
+        in Guid subGroupOfPowerSettingsGuid,
+        in Guid powerSettingGuid,
+        uint value);
+
+    /// <summary>Makes a power scheme the active one.</summary>
+    /// <param name="userRootPowerKey">Reserved; must be <see cref="IntPtr.Zero"/>.</param>
+    /// <param name="schemeGuid">Scheme to activate.</param>
+    /// <returns><see cref="ErrorSuccess"/> on success, otherwise a Win32 error code.</returns>
+    [LibraryImport(PowrProf, EntryPoint = "PowerSetActiveScheme")]
+    internal static partial uint PowerSetActiveScheme(IntPtr userRootPowerKey, in Guid schemeGuid);
+
     /// <summary>Frees memory allocated by the power management API.</summary>
     /// <param name="memory">Pointer to free.</param>
     /// <returns>Zero on success.</returns>

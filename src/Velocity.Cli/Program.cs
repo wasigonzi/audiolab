@@ -7,9 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Velocity.Abstractions.Hardware;
+using Velocity.Abstractions.Processes;
 using Velocity.Abstractions.Transactions;
 using Velocity.Abstractions.Tweaks;
 using Velocity.Composition;
+using Velocity.Core.Advisory;
 using Velocity.Core.Hardware;
 using Velocity.Core.Transactions;
 using Velocity.Core.Tweaks;
@@ -147,6 +149,31 @@ public static class Program
             foreach (KeyValuePair<string, string> failure in profile.ProbeFailures)
             {
                 Console.WriteLine($"  - {failure.Key}: {failure.Value}");
+            }
+        }
+
+        IReadOnlyList<ProcessSnapshot>? processes = null;
+        var inspector = services.GetService<IProcessInspector>();
+        if (inspector is not null)
+        {
+            processes = await inspector.GetProcessesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        IReadOnlyList<SystemFinding> findings = SystemAdvisor.Analyze(profile, processes);
+
+        if (findings.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("What this product cannot fix for you:");
+            foreach (SystemFinding finding in findings)
+            {
+                Console.WriteLine($"  [{finding.Severity}] {finding.Title}");
+                Console.WriteLine($"      {finding.Detail}");
+
+                if (finding.Recommendation is not null)
+                {
+                    Console.WriteLine($"      -> {finding.Recommendation}");
+                }
             }
         }
 
@@ -316,6 +343,15 @@ public static class Program
         {
             Console.WriteLine($"  {prefix}");
             Console.WriteLine($"      {reason}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Power settings the privileged helper may write (AC side only):");
+        foreach ((string subgroup, string setting, string purpose) in
+                 PrivilegedOperationPolicy.DescribePowerWriteAllowList())
+        {
+            Console.WriteLine($"  {subgroup}/{setting}");
+            Console.WriteLine($"      {purpose}");
         }
     }
 

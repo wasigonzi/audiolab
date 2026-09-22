@@ -4,14 +4,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Velocity.Abstractions.Hardware;
+using Velocity.Abstractions.Power;
 using Velocity.Abstractions.Privileges;
 using Velocity.Abstractions.State;
 using Velocity.Abstractions.Telemetry;
 using Velocity.Platform.Windows.Ipc;
 using Velocity.Abstractions.Processes;
 using Velocity.Abstractions.Services;
+using Velocity.Core.Power;
 using Velocity.Core.Processes;
 using Velocity.Core.Services;
+using Velocity.Platform.Windows.Power;
 using Velocity.Platform.Windows.Privileges;
 using Velocity.Platform.Windows.Processes;
 using Velocity.Platform.Windows.Services;
@@ -88,6 +91,16 @@ public static class WindowsPlatformServiceCollectionExtensions
             provider.GetRequiredService<Abstractions.Services.IServiceController>(),
             provider.GetRequiredService<ILogger<ServiceStateProvider>>()));
 
+        services.TryAddSingleton<IPowerConfigurationController>(provider =>
+            new WindowsPowerConfigurationController(
+                provider.GetRequiredService<ILogger<WindowsPowerConfigurationController>>(),
+                provider.GetRequiredService<IPrivilegeContext>(),
+                provider.GetRequiredService<IPrivilegedChannel>()));
+
+        services.AddSingleton<IStateProvider>(provider => new PowerStateProvider(
+            provider.GetRequiredService<IPowerConfigurationController>(),
+            provider.GetRequiredService<ILogger<PowerStateProvider>>()));
+
         services.AddSingleton<ITelemetryProvider>(provider => new GpuTelemetryProvider(
             provider.GetRequiredService<ILogger<GpuTelemetryProvider>>(),
             provider.GetRequiredService<TimeProvider>()));
@@ -111,6 +124,17 @@ public static class WindowsPlatformServiceCollectionExtensions
             provider.GetRequiredService<IPrivilegeContext>(),
             provider.GetRequiredService<ILogger<RegistryStateProvider>>(),
             channel: null));
+
+        // Inside the helper there is nothing to forward to: it is the elevated process.
+        services.TryAddSingleton<IPowerConfigurationController>(provider =>
+            new WindowsPowerConfigurationController(
+                provider.GetRequiredService<ILogger<WindowsPowerConfigurationController>>(),
+                privileges: null,
+                channel: null));
+
+        services.AddSingleton<IStateProvider>(provider => new PowerStateProvider(
+            provider.GetRequiredService<IPowerConfigurationController>(),
+            provider.GetRequiredService<ILogger<PowerStateProvider>>()));
 
         return services;
     }
