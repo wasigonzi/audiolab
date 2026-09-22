@@ -10,9 +10,12 @@ using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.Processes;
 using Velocity.Abstractions.Transactions;
 using Velocity.Abstractions.Tweaks;
+using Velocity.Abstractions.Games;
+using Velocity.Abstractions.Profiles;
 using Velocity.Composition;
 using Velocity.Core.Advisory;
 using Velocity.Core.Hardware;
+using Velocity.Core.Profiles;
 using Velocity.Core.Transactions;
 using Velocity.Core.Tweaks;
 using Velocity.Data.Repositories;
@@ -71,6 +74,8 @@ public static class Program
                 "catalogue" or "catalog" =>
                     await RunCatalogueAsync(services, cancellation.Token).ConfigureAwait(false),
                 "detect" => await RunDetectAsync(services, cancellation.Token).ConfigureAwait(false),
+                "games" => await RunGamesAsync(services, cancellation.Token).ConfigureAwait(false),
+                "profiles" => await RunProfilesAsync(services, cancellation.Token).ConfigureAwait(false),
                 "history" => await RunHistoryAsync(services, cancellation.Token).ConfigureAwait(false),
                 "recover" => await RunRecoverAsync(services, cancellation.Token).ConfigureAwait(false),
                 "rollback" => await RunRollbackAsync(services, args, cancellation.Token).ConfigureAwait(false),
@@ -233,6 +238,104 @@ public static class Program
         return 0;
     }
 
+    private static async Task<int> RunGamesAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var library = services.GetRequiredService<IGameLibrary>();
+        GameLibraryScan scan = await library.ScanAsync(cancellationToken).ConfigureAwait(false);
+
+        if (scan.Games.Count == 0)
+        {
+            Console.WriteLine("No installed games were found.");
+        }
+        else
+        {
+            Console.WriteLine($"{scan.Games.Count} installed game(s):");
+            foreach (GameInstallation game in scan.Games)
+            {
+                Console.WriteLine($"  {game.Name}");
+                Console.WriteLine($"      {game.Store}  {game.Id}");
+
+                if (game.InstallDirectory is not null)
+                {
+                    Console.WriteLine($"      {game.InstallDirectory}");
+                }
+            }
+        }
+
+        if (scan.FailedSources.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Stores that could not be read:");
+            foreach (KeyValuePair<string, string> failure in scan.FailedSources)
+            {
+                Console.WriteLine($"  - {failure.Key}: {failure.Value}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "GOG, EA, Ubisoft Connect and Battle.net keep their installed-game records in private " +
+            "databases whose formats are undocumented, so they are not scanned. Add those games by " +
+            "hand rather than relying on a scanner that breaks on the next client update.");
+
+        var detector = services.GetRequiredService<IGameDetector>();
+        IReadOnlyList<DetectedGame> running =
+            await detector.DetectRunningGamesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (running.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Running now:");
+            foreach (DetectedGame game in running)
+            {
+                Console.WriteLine(
+                    $"  {game.ExecutableName} (pid {game.ProcessId}) — {DescribeReason(game.Reason)}");
+            }
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunProfilesAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var profiles = services.GetRequiredService<IProfileService>();
+
+        foreach (OptimizationProfile profile in
+                 await profiles.GetProfilesAsync(cancellationToken).ConfigureAwait(false))
+        {
+            Console.WriteLine($"{profile.Name}  [{profile.Id}]");
+            Console.WriteLine(
+                $"      {profile.Kind}{(profile.IsBuiltIn ? ", built in" : string.Empty)}" +
+                $"{(profile.GameId is null ? string.Empty : $", bound to {profile.GameId}")}");
+
+            foreach (ProfileTweakSetting setting in profile.Tweaks.Where(setting => setting.Enabled))
+            {
+                Console.WriteLine($"        - {setting.TweakId}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "A profile is a list of modules to offer, not a promise about frames. Each module still " +
+            "checks your hardware and is skipped with a reason when it does not apply.");
+
+        return 0;
+    }
+
+    private static string DescribeReason(GameDetectionReason reason) => reason switch
+    {
+        GameDetectionReason.InstalledLibraryMatch => "its executable is in your library",
+        GameDetectionReason.StoreLibraryFolder =>
+            "it lives inside a game's install folder, which also matches launchers and crash handlers",
+        GameDetectionReason.UserDeclared => "you marked this executable as a game",
+        GameDetectionReason.DeclaredByProcess => "it asked Windows for the gaming quality of service",
+        _ => "no evidence",
+    };
+
     private static async Task<int> RunHistoryAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var journal = services.GetRequiredService<ITransactionJournal>();
@@ -372,6 +475,8 @@ public static class Program
         Console.WriteLine("  info                          Describe this machine and what the analyzer makes of it.");
         Console.WriteLine("  catalogue                     List optimization modules and their compatibility.");
         Console.WriteLine("  detect                        Report what each module observes, changing nothing.");
+        Console.WriteLine("  games                         List installed games and any running now.");
+        Console.WriteLine("  profiles                      List optimization profiles and what each one applies.");
         Console.WriteLine("  history                       Show what this product has changed on this machine.");
         Console.WriteLine("  recover                       Roll back any transaction left in flight by a crash.");
         Console.WriteLine("  rollback [--transaction <id> | --tweak <id>]");

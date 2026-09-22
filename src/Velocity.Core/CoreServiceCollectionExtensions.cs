@@ -4,8 +4,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.State;
 using Velocity.Core.Auditing;
+using Velocity.Core.Games;
 using Velocity.Core.Hardware;
 using Velocity.Core.Network;
+using Velocity.Core.Profiles;
+using Velocity.Core.Sessions;
 using Velocity.Core.State;
 using Velocity.Core.Telemetry;
 using Velocity.Core.Transactions;
@@ -50,6 +53,16 @@ public static class CoreServiceCollectionExtensions
             provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SystemMonitor>>(),
             provider.GetRequiredService<SystemMonitorOptions>(),
             provider.GetRequiredService<TimeProvider>()));
+
+        services.TryAddSingleton<IProfileService, ProfileService>();
+        services.TryAddSingleton<Abstractions.Games.IGameLibrary>(provider => new GameLibrary(
+            provider.GetServices<Abstractions.Games.IGameLibrarySource>(),
+            provider.GetRequiredService<TimeProvider>(),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<GameLibrary>>()));
+        services.TryAddSingleton<IUserDeclaredGames, UserDeclaredGames>();
+        services.TryAddSingleton<Abstractions.Games.IGameDetector, GameDetector>();
+        services.TryAddSingleton<GamingSessionOptions>();
+        services.TryAddSingleton<IGamingSessionManager, GamingSessionManager>();
 
         return services;
     }

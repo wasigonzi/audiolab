@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Velocity.Abstractions.Games;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.Power;
 using Velocity.Abstractions.Privileges;
@@ -14,6 +15,7 @@ using Velocity.Abstractions.Services;
 using Velocity.Core.Power;
 using Velocity.Core.Processes;
 using Velocity.Core.Services;
+using Velocity.Platform.Windows.Games;
 using Velocity.Platform.Windows.Power;
 using Velocity.Platform.Windows.Privileges;
 using Velocity.Platform.Windows.Processes;
@@ -100,6 +102,13 @@ public static class WindowsPlatformServiceCollectionExtensions
         services.AddSingleton<IStateProvider>(provider => new PowerStateProvider(
             provider.GetRequiredService<IPowerConfigurationController>(),
             provider.GetRequiredService<ILogger<PowerStateProvider>>()));
+
+        services.TryAddSingleton<IGameFileSystem, WindowsGameFileSystem>();
+        services.TryAddSingleton<IStoreLocator, WindowsStoreLocator>();
+        services.TryAddSingleton<IGameLauncher, WindowsGameLauncher>();
+
+        services.AddSingleton<IGameLibrarySource, Core.Games.SteamLibrarySource>();
+        services.AddSingleton<IGameLibrarySource, Core.Games.EpicLibrarySource>();
 
         services.AddSingleton<ITelemetryProvider>(provider => new GpuTelemetryProvider(
             provider.GetRequiredService<ILogger<GpuTelemetryProvider>>(),
