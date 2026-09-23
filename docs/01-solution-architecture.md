@@ -32,7 +32,7 @@ Each arrow is a component boundary, not a phase of a script:
 
 ```
                      ┌──────────────────────────────────────────┐
-                     │  Velocity.App (WinUI 3, Phase 2)         │
+                     │  Velocity.App (WinUI 3)                  │
                      │  XAML views only, no logic               │
                      └───────────────┬──────────────────────────┘
                                      │
@@ -71,7 +71,7 @@ Each arrow is a component boundary, not a phase of a script:
 
 That is not stylistic. It means the entire decision-making layer — which cores a game should
 prefer, whether a change is compatible, whether a snapshot can be rolled back, whether a benchmark
-difference is real — is testable on any CI agent, including a Linux container. 164 tests exercise
+difference is real — is testable on any CI agent, including a Linux container. 447 tests exercise
 the real engine today without a Windows machine in the loop. Windows code is confined to the parts
 that genuinely need it: reading the machine and writing to it.
 
@@ -92,7 +92,7 @@ Two processes, deliberately:
 
 - **Desktop application** — runs as the interactive user, unelevated. Owns the engine, the
   database, the UI, all decision-making.
-- **Privileged helper** — a Windows service running as SYSTEM. Exposes four operations, applies an
+- **Privileged helper** — a Windows service running as SYSTEM. Exposes a short, fixed operation list, applies an
   allow-list policy to each one, and has no UI, no network access and no plug-in surface.
 
 The desktop process is never elevated in a supported installation. See
@@ -114,7 +114,7 @@ privileged allow list, or the ability to bypass verification.
 
 ## Commercial architecture
 
-The product is intended to be sold. These seams exist in Phase 1 so that later work does not
+The product is intended to be sold. These seams exist from the first commit so that later work does not
 require a rewrite:
 
 | Requirement | Seam that supports it |
@@ -125,7 +125,7 @@ require a rewrite:
 | Hardware/game database | `HardwareFingerprint` is non-identifying by construction and already the key for stored results |
 | Localization | No user-facing string is composed in the engine's control flow; descriptors carry display text |
 | Portable configuration | Every path comes from `IVelocityPaths`; nothing reads an environment variable directly |
-| Consent-gated telemetry | No network client exists in Phase 1. Nothing can be sent because nothing can send |
+| Consent-gated telemetry | No network client exists at all. Nothing can be sent because nothing can send |
 
 Licensing is deliberately *not* implemented yet and deliberately kept out of the engine: an
 optimization decision must never depend on a licence check.

@@ -106,6 +106,28 @@ benchmark_run(
 setting(key PK, value, updated_at_utc)
 ```
 
+## Tables (v2)
+
+```sql
+tweak_trial_result(
+  PK (hardware_fingerprint, workload_id, tweak_id, options_hash),
+  options_document, decision, rationale,
+  baseline_run_id, candidate_run_id,
+  baseline_p99_ms, candidate_p99_ms, baseline_mean_ms, candidate_mean_ms,
+  relative_change, p_value, sample_count, evaluated_at_utc, trial_count)
+  INDEX (hardware_fingerprint, workload_id, evaluated_at_utc DESC)
+  INDEX (tweak_id, decision)
+```
+
+The four-part primary key is the point of this table. A trial result is evidence about the machine
+it was measured on, for the workload it was measured under, and nothing else; the scope is in the
+key so that no query can accidentally lose it.
+
+Options are hashed with their keys sorted before hashing, so the same trial re-run updates one row
+and increments `trial_count` — how much evidence stands behind the answer — rather than creating a
+second. Two option sets that differ (hardware scheduling on versus off) hash differently and are
+therefore distinct trials of the same module.
+
 `benchmark_run` stores frame **times**, with frame rates derived for display. Averaging frames per
 second hides exactly the stutter this product exists to remove.
 

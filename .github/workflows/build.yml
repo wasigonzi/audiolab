@@ -43,5 +43,11 @@ jobs:
       - run: dotnet restore Velocity.sln
       - run: dotnet build Velocity.sln --configuration Release --no-restore
       - run: dotnet test Velocity.sln --configuration Release --no-build
+      # Read-only commands, so the runner is described and the catalogue exercised without
+      # anything being changed on it.
       - name: Describe the runner through the engine
         run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- info
+      - name: List the catalogue and its compatibility on this machine
+        run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- catalogue
+      - name: Report whether frame time capture can run here
+        run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- benchmark

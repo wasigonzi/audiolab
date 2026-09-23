@@ -8,14 +8,18 @@ A Windows gaming optimizer whose competitive claim is **not** "500 registry twea
 Every optimization must be real, technically justified, measurable and reversible. Anything that
 cannot pass that bar does not ship.
 
-## Status: Phase 1 — foundation
+## Status: all ten phases implemented, not yet validated on hardware
 
-The engine, persistence, transaction/rollback system, hardware detection, privileged-helper
-architecture, MVVM infrastructure and benchmark statistics are implemented and tested. The WinUI
-dashboard (Phase 2) and the first production optimization module (Phase 3) are not here yet, and
-[docs/11-phase1-status.md](docs/11-phase1-status.md) says exactly what is and is not implemented.
+The engine, persistence, transaction and rollback system, hardware detection, privileged helper,
+ten optimization modules, the system advisor, game detection and per-game profiles, Optimize &
+Launch, frame time capture, the Benchmark Lab and the auto-tune engine are all implemented and
+tested.
 
-**164 tests, 0 warnings.**
+**447 tests, 0 warnings.** Every one of them runs on Linux, which is both the point of the
+architecture and its limit: no line of the Windows-specific code — the P/Invoke probes, the
+registry provider, the named pipe transport, the ETW frame capture — has ever executed on Windows.
+[docs/11-status.md](docs/11-status.md) states precisely what that means for each component and what
+has to be verified before this is shipped to anyone.
 
 ## Build and test
 
@@ -35,7 +39,13 @@ deliberate architectural property, not an accident. The two Windows projects bui
 On Windows:
 
 ```powershell
-dotnet run --project src\Velocity.Cli -- info       # what this machine is, and what the analyzer makes of it
+dotnet run --project src\Velocity.Cli -- info       # what this machine is, including what no tweak can fix
+dotnet run --project src\Velocity.Cli -- catalogue  # the modules, and whether each applies to this machine
+dotnet run --project src\Velocity.Cli -- detect     # what each module observes, changing nothing
+dotnet run --project src\Velocity.Cli -- games      # installed games, and any running now
+dotnet run --project src\Velocity.Cli -- profiles   # the profiles and what each one applies
+dotnet run --project src\Velocity.Cli -- benchmark  # whether frame time capture can run here
+dotnet run --project src\Velocity.Cli -- autotune   # what would be trialled, and what has been measured
 dotnet run --project src\Velocity.Cli -- policy     # exactly what the privileged helper may and may not write
 dotnet run --project src\Velocity.Cli -- history    # what this product has changed on this machine
 dotnet run --project src\Velocity.Cli -- rollback   # put it back
@@ -51,7 +61,8 @@ dotnet run --project src\Velocity.Cli -- rollback   # put it back
 | `Velocity.Core` | net10.0 | Engine: catalogue, transactions, rollback, topology analysis, statistics |
 | `Velocity.Ipc` | net10.0 | Helper protocol, framing, authorization policy |
 | `Velocity.Platform.Windows` | net10.0-windows | Hardware probes, registry provider, pipe transport |
-| `Velocity.Helper` | net10.0-windows | SYSTEM service, four operations |
+| `Velocity.Tweaks` | net10.0 | The optimization modules, portable because they reach the machine only through `IStateAccessor` |
+| `Velocity.Helper` | net10.0-windows | SYSTEM service, one fixed operation list |
 | `Velocity.Presentation` | net10.0 | MVVM view models, no XAML |
 | `Velocity.Cli` | net10.0-windows | Headless host and composition root |
 
@@ -71,6 +82,14 @@ Only two projects touch Windows APIs. Everything that *decides* anything is port
 - **A neutral measurement means revert.** An unnecessary change to someone's operating system is a
   cost even when it is free in frames.
 - **"Not exposed by this driver" is not "off".** Capability values are three-valued throughout.
+- **Detection states its evidence.** "This executable is in your library" and "something is using
+  the GPU" are different claims, and the second is not made at all.
+- **A restart-gated change is reported as pending, never as applied.** Auto-tune excludes such
+  settings rather than measuring an unchanged machine.
+- **Results never cross machines.** Benchmark and trial history are keyed by hardware fingerprint
+  and workload, and no query in the code reaches past that scope.
+- **There is no memory cleaner.** Emptying working sets improves the number and slows the machine
+  down, so memory is reported and not "optimized".
 
 ## Documentation
 
@@ -86,16 +105,35 @@ Only two projects touch Windows APIs. Everything that *decides* anything is port
 | [8. Database schema](docs/08-database-schema.md) | Tables, conventions, migrations |
 | [9. Benchmark and telemetry](docs/09-benchmark-and-telemetry.md) | Frame-time statistics and the keep/revert rule |
 | [10. Security model](docs/10-security-model.md) | Allow-list policy, threat model, personal data |
-| [11. Phase 1 status](docs/11-phase1-status.md) | What is done, what is not, and what is untested |
+| [11. Status](docs/11-status.md) | What is done, what is untested, and what must be verified on hardware |
+| [12. Optimization modules](docs/12-optimization-modules.md) | Every module, what it writes, and what it claims |
+| [13. Games and sessions](docs/13-games-and-sessions.md) | Detection, profiles and Optimize & Launch |
+| [14. Frame capture and auto-tune](docs/14-frame-capture-and-autotune.md) | How a measured verdict is reached |
 
-## Roadmap
+## What was built
 
-| Phase | Deliverable |
-| --- | --- |
-| **1** | **Foundation — done** |
-| 2 | WinUI 3 glassmorphism dashboard and live telemetry |
-| 3 | First complete optimization module, proven end to end on hardware |
-| 4–7 | CPU, Windows background, network, then GPU/memory/storage/power modules |
-| 8 | Game profiles and Optimize & Launch |
-| 9 | ETW/PDH telemetry and the Benchmark Lab |
-| 10 | Auto-tune |
+| Phase | Deliverable | State |
+| --- | --- | --- |
+| 1 | Foundation: engine, journal, rollback, probes, helper, statistics | Implemented |
+| 2 | WinUI 3 dashboard and live telemetry | Implemented |
+| 3 | First complete optimization module end to end | Implemented |
+| 4 | CPU engine: process control, CPU sets, priority, core placement | Implemented |
+| 5 | Windows background reduction and the service analyzer | Implemented |
+| 6 | Network: measurement first, and only settings the driver publishes | Implemented |
+| 7 | GPU, memory, storage and power, plus the system advisor | Implemented |
+| 8 | Game detection, per-game profiles, Optimize & Launch | Implemented |
+| 9 | ETW frame time capture and the Benchmark Lab | Implemented |
+| 10 | Auto-tune | Implemented |
+
+## What is left before this ships
+
+Implemented is not shipped. The honest list is in
+[docs/11-status.md](docs/11-status.md); the short version:
+
+1. **Run it on Windows.** Nothing Windows-specific has ever executed. The probes, the registry
+   provider, the named pipe transport and the ETW capture are written against documented APIs and
+   reviewed, not run.
+2. **Validate each module on real hardware,** with the Benchmark Lab, on more than one machine.
+   Until then every `ExpectedEffect` in the catalogue is a literature claim, not a measurement.
+3. **Sign the helper and write an installer** that registers the service with a correct ACL.
+4. **Test the rollback path against a hard power loss,** not only against a simulated one.

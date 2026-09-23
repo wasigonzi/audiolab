@@ -106,7 +106,7 @@ From `RollbackAndRecoveryTests`:
   value and marking the transaction `RolledBack`;
 - a crash before any write leaves the machine untouched.
 
-## Restore Center (Phase 2 UI over Phase 1 mechanics)
+## Restore Center
 
 The data model already supports everything the Restore Center needs:
 

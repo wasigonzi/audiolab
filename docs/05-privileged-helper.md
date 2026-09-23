@@ -26,7 +26,7 @@ So the UI stays unelevated and a small service does the privileged work:
 
 ## Attack surface, deliberately small
 
-The helper exposes exactly four operations:
+The helper exposes exactly eight operations:
 
 | Operation | Purpose |
 | --- | --- |
@@ -34,6 +34,17 @@ The helper exposes exactly four operations:
 | `get-identity` | Helper version, account, protocol version |
 | `registry.read` | Read one value (refused for the credential hives) |
 | `registry.write` | Write or delete one value (allow-list enforced) |
+| `power.get-active-scheme` | Read the active power scheme GUID |
+| `power.set-active-scheme` | Activate a power scheme |
+| `power.read-ac-value` | Read one AC power setting value |
+| `power.write-ac-value` | Write one AC power setting value (allow-list enforced) |
+
+There is deliberately **no DC operation**. Changing what a laptop does on battery is a battery-life
+decision, and the protocol gives no way to make it — not merely no caller that does.
+
+Power settings are allow-listed **by setting GUID, not by subgroup**. A subgroup rule would hand the
+helper the whole processor power policy, including settings with real thermal implications; the
+four entries in the list each correspond to a shipping module.
 
 It has no user interface, no listening socket, no scripting host and no way to load code supplied by
 the caller. It does **not** reference `Velocity.Core`: the privileged process cannot be asked to run
@@ -98,7 +109,7 @@ named pipe; the tests supply an in-memory duplex pair. The validation logic unde
 the same code that runs in production — 41 tests cover framing, dispatch, replay rejection and the
 policy.
 
-## Installation and lifecycle (Phase 2)
+## Installation and lifecycle
 
 The service is installed by the MSI as `VelocityHelper`, start type `Manual`, triggered by the
 desktop application. It writes its own log under `%ProgramData%\Velocity\logs` with the

@@ -55,7 +55,7 @@ src/
     Privileges/                WindowsPrivilegeContext
     Ipc/                       NamedPipeServerHost (ACL + caller verification), client channel
 
-  Velocity.Helper/             net10.0-windows — SYSTEM service, four operations
+  Velocity.Helper/             net10.0-windows — SYSTEM service, one fixed operation list
     Handlers/                  Ping, GetIdentity, RegistryRead, RegistryWrite
 
   Velocity.Presentation/       net10.0 — MVVM, no XAML, no WinUI reference
@@ -77,11 +77,9 @@ tests/
 docs/                          This documentation set
 ```
 
-## Projects planned but not yet created
+## Projects still to be created
 
-| Project | Phase | Why not now |
-| --- | --- | --- |
-| `Velocity.App` (WinUI 3) | 2 | Phase 1 is explicitly infrastructure; the view models it will bind to already exist and are tested |
-| `Velocity.Tweaks.*` | 3+ | No production optimization module ships in Phase 1 — see [11-phase1-status.md](11-phase1-status.md) |
-| `Velocity.Setup` (MSI/MSIX) | 2 | Needs the UI head to package |
-| `Velocity.Platform.Windows.Tests` | 3 | Requires a Windows CI leg; the logic that can be tested without Windows already is |
+| Project | Why not yet |
+| --- | --- |
+| `Velocity.Setup` (MSI/MSIX) | Needs a signing identity and a service registration story — see [11-status.md](11-status.md) |
+| `Velocity.Platform.Windows.Tests` | Requires a Windows CI leg that actually runs, not merely compiles. The logic that can be tested without Windows already is |

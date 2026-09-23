@@ -2,10 +2,13 @@
 
 ## Position
 
-The measurement **data model** and the **statistics that consume it** are implemented and tested in
-Phase 1. The **sampling** — ETW frame-time capture, PDF/PDH counters, DPC observation — lands in
-Phase 9, because it can only be validated on real hardware. Nothing is stubbed: there is no fake
-sampler returning plausible numbers. See [11-phase1-status.md](11-phase1-status.md).
+The measurement data model, the statistics, the ETW frame-time capture, the recorder, the Benchmark
+Lab and the auto-tune loop are all implemented. Nothing is stubbed: there is no fake sampler
+returning plausible numbers, and where capture cannot run the product says so rather than producing
+a comparison with nothing behind it.
+
+The capture path has never run on Windows. See [11-status.md](11-status.md) for what that means, and
+[14-frame-capture-and-autotune.md](14-frame-capture-and-autotune.md) for how a verdict is reached.
 
 ## Frame time, not frame rate
 

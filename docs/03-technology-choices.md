@@ -11,7 +11,7 @@ expressions and the modern analyzer set.
 compile with warnings, and requiring an XML summary on every public member keeps intent attached to
 the code rather than to a wiki.
 
-## WinUI 3 / Windows App SDK (Phase 2)
+## WinUI 3 / Windows App SDK
 
 Required by the visual brief: Mica and Acrylic backdrops, rounded geometry, 60+ fps compositor-
 driven animation. WPF cannot produce Mica without interop hacks; WinForms cannot produce it at all;
@@ -85,12 +85,17 @@ There are **no undocumented syscalls and no `NtQuerySystemInformation` structure
 optimizer that breaks on the next Windows update is worse than one that reports a subsystem as
 unavailable.
 
-## ETW and performance counters (Phase 9)
+## ETW and performance counters
 
-Frame time capture, DPC/ISR observation and background CPU attribution require ETW
-(`Microsoft.Diagnostics.Tracing.TraceEvent`) and PDH. They are deliberately **not** stubbed in
-Phase 1: the telemetry data model exists, the statistics that consume it are implemented and tested,
-and the sampling arrives with the phase that can validate it on real hardware.
+Frame time capture uses ETW through `Microsoft.Diagnostics.Tracing.TraceEvent`, subscribed to the
+`Microsoft-Windows-DxgKrnl` present events. That provider is the only documented way to observe
+another process's frame times on Windows; there is no public API, so there is no lighter
+alternative to fall back to. It needs an elevated real-time trace session, which is a real
+constraint and is therefore modelled — `IFrameTimeSource.GetStatusAsync` reports why capture cannot
+start — rather than hidden behind an empty result.
+
+Resource counters come from PDH through `System.Diagnostics.PerformanceCounter`, opened lazily so
+that constructing the telemetry provider never blocks a DI graph.
 
 ## What was rejected
 
@@ -100,4 +105,4 @@ and the sampling arrives with the phase that can validate it on real hardware.
 | An ORM | Wrong abstraction for a crash-recovery journal |
 | PowerShell as the engine | Slow to start, hard to error-handle, impossible to unit test, and encourages copy-pasted tweak scripts |
 | A single monolithic elevated process | Requires the entire UI to run as administrator |
-| Vendor SDKs (NVAPI, ADL) in Phase 1 | Redistribution and stability questions; Windows-exposed settings come first, and the product must not claim to control what it cannot |
+| Vendor SDKs (NVAPI, ADL) | Redistribution and stability questions; Windows-exposed settings come first, and the product must not claim to control what it cannot |
