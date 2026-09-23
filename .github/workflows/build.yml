@@ -53,3 +53,17 @@ jobs:
         run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- catalogue
       - name: Report whether frame time capture can run here
         run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- benchmark
+
+      # The runner is the only machine in this project's life that can produce a real Windows
+      # build, so it keeps one. These are unsigned and unpackaged: something to run on a test
+      # machine, not something to hand to a user.
+      - name: Publish the application, the command line host and the helper
+        run: |
+          dotnet publish src/Velocity.App --configuration Release -r win-x64 --self-contained false -o publish/app
+          dotnet publish src/Velocity.Cli --configuration Release -r win-x64 --self-contained false -o publish/cli
+          dotnet publish src/Velocity.Helper --configuration Release -r win-x64 --self-contained false -o publish/helper
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velocity-win-x64
+          path: publish/
+          retention-days: 30
