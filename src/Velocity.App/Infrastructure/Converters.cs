@@ -52,6 +52,38 @@ public sealed class FractionToPercentConverter : IValueConverter
 }
 
 /// <summary>
+/// Turns a 0-1 fraction into a pixel height for a drawn vertical meter.
+/// </summary>
+/// <remarks>
+/// The track height arrives as the converter parameter because a <c>DataTemplate</c> item has no
+/// way to ask its parent how tall it is. WinUI's <c>ProgressBar</c> is horizontal only, so a
+/// vertical per-core meter is drawn rather than rotated.
+/// </remarks>
+public sealed class FractionToHeightConverter : IValueConverter
+{
+    private const double DefaultTrackHeight = 64d;
+
+    /// <inheritdoc />
+    public object Convert(object value, Type targetType, object parameter, string language)
+    {
+        double track = parameter is string text &&
+                       double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : DefaultTrackHeight;
+
+        double fraction = value is double number && !double.IsNaN(number)
+            ? Math.Clamp(number, 0d, 1d)
+            : 0d;
+
+        return fraction * track;
+    }
+
+    /// <inheritdoc />
+    public object ConvertBack(object value, Type targetType, object parameter, string language) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>
 /// Turns a risk level into a colour key, so the list communicates risk without a wall of text.
 /// </summary>
 public sealed class RiskToBrushKeyConverter : IValueConverter

@@ -65,12 +65,23 @@
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
-                                <ProgressBar
-                                    Orientation="Vertical"
-                                    Maximum="100"
+                                <!--
+                                    Drawn rather than built from a ProgressBar: WinUI's ProgressBar
+                                    is horizontal only, and rotating one fights its layout. A track
+                                    with a bottom-anchored fill is what a per-core meter actually is.
+                                -->
+                                <Border
                                     Height="64"
-                                    Foreground="{StaticResource AccentBrush}"
-                                    Value="{Binding Converter={StaticResource FractionToPercentConverter}}" />
+                                    Width="14"
+                                    CornerRadius="7"
+                                    Background="{StaticResource StrokeBrush}">
+                                    <Rectangle
+                                        VerticalAlignment="Bottom"
+                                        RadiusX="7"
+                                        RadiusY="7"
+                                        Fill="{StaticResource AccentBrush}"
+                                        Height="{Binding Converter={StaticResource FractionToHeightConverter}, ConverterParameter=64}" />
+                                </Border>
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>
                     </ItemsRepeater>
