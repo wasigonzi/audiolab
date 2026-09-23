@@ -2,7 +2,9 @@ name: build
 
 on:
   push:
-    branches: ["main"]
+    # The development branch is included because the Windows leg is the only place the WinUI head
+    # can be compiled at all, and waiting for a merge to find that out is too late.
+    branches: ["main", "claude/**"]
   pull_request:
   workflow_dispatch:
 
