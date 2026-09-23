@@ -1,6 +1,8 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Velocity.Abstractions.Hosting;
 using Velocity.Data.Migrations;
 using Velocity.Data.Repositories;
 
@@ -20,8 +22,18 @@ public static class DataServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddSingleton<IDatabaseConnectionFactory, SqliteConnectionFactory>();
-        services.TryAddSingleton<IDatabaseMigrator, DatabaseMigrator>();
+        services.TryAddSingleton<IDatabaseConnectionFactory>(provider =>
+            new SqliteConnectionFactory(provider.GetRequiredService<IVelocityPaths>()));
+
+        // Constructed explicitly rather than by type. DatabaseMigrator also has a constructor
+        // taking an explicit migration set for tests, and the container prefers it: an
+        // unregistered IEnumerable<T> resolves to an empty sequence instead of failing, so
+        // registering by type produced a migrator with no migrations, a database with nothing in
+        // it but schema_version, and a "no such table" on the first query. Naming the constructor
+        // here is what makes that impossible.
+        services.TryAddSingleton<IDatabaseMigrator>(provider => new DatabaseMigrator(
+            provider.GetRequiredService<IDatabaseConnectionFactory>(),
+            provider.GetRequiredService<ILogger<DatabaseMigrator>>()));
         services.TryAddSingleton<ITransactionJournal, TransactionJournal>();
         services.TryAddSingleton<IAuditRepository, AuditRepository>();
         services.TryAddSingleton<IAppliedTweakRepository, AppliedTweakRepository>();

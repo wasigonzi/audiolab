@@ -10,6 +10,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Velocity.Data\Velocity.Data.csproj" />
+    <!-- The composition tests resolve the persistence layer the way a host does, which
+         means going through the diagnostics package that supplies IVelocityPaths. -->
+    <ProjectReference Include="..\..\src\Velocity.Diagnostics\Velocity.Diagnostics.csproj" />
     <ProjectReference Include="..\Velocity.TestSupport\Velocity.TestSupport.csproj" />
   </ItemGroup>
 
