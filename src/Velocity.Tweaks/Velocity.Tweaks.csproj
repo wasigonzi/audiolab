@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkPortable)</TargetFramework>
+    <RootNamespace>Velocity.Tweaks</RootNamespace>
+    <Description>The optimization modules. Portable on purpose: a module reaches the machine only through the state accessor, so every module is unit tested against a fabricated machine with no Windows present.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\Velocity.Core\Velocity.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

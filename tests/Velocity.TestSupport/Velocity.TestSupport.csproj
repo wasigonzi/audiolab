@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkPortable)</TargetFramework>
+    <RootNamespace>Velocity.TestSupport</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Description>Hardware fixtures and fakes shared by the test projects. Lets the engine be tested against machines the team does not physically own.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Velocity.Core\Velocity.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,605 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Runtime.Versioning;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Velocity.Abstractions.Hardware;
+using Velocity.Abstractions.Processes;
+using Velocity.Abstractions.Transactions;
+using Velocity.Abstractions.Tweaks;
+using Velocity.Abstractions.Games;
+using Velocity.Abstractions.Profiles;
+using Velocity.Abstractions.Telemetry;
+using Velocity.Composition;
+using Velocity.Core.Advisory;
+using Velocity.Core.AutoTune;
+using Velocity.Core.Benchmarking;
+using Velocity.Core.Hardware;
+using Velocity.Core.Profiles;
+using Velocity.Core.Transactions;
+using Velocity.Core.Tweaks;
+using Velocity.Data.Repositories;
+using Velocity.Diagnostics.Logging;
+using Velocity.Ipc.Authorization;
+
+namespace Velocity.Cli;
+
+/// <summary>
+/// Command line host for the optimization engine.
+/// </summary>
+/// <remarks>
+/// This exists for three reasons: support staff can capture a machine's state without installing
+/// the desktop application, the engine can be driven on real hardware before the interface exists,
+/// and every phase of the product has a way to be exercised end to end that does not depend on a
+/// window being open.
+/// </remarks>
+[SupportedOSPlatform("windows")]
+public static class Program
+{
+    /// <summary>Runs a command.</summary>
+    /// <param name="args">Command and its arguments.</param>
+    /// <returns>Zero on success, one on a handled failure, two on a usage error.</returns>
+    public static async Task<int> Main(string[] args)
+    {
+        if (args.Length == 0 || IsHelp(args[0]))
+        {
+            PrintUsage();
+            return args.Length == 0 ? 2 : 0;
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            cancellation.Cancel();
+        };
+
+        // The policy listing needs no database, no elevation and no hardware, so it is answered
+        // before the host is built.
+        if (string.Equals(args[0], "policy", StringComparison.OrdinalIgnoreCase))
+        {
+            PrintPolicy();
+            return 0;
+        }
+
+        await using ServiceProvider services = VelocityHost.Build(writeToConsole: false);
+
+        try
+        {
+            await VelocityHost.StartAsync(services, cancellation.Token).ConfigureAwait(false);
+
+            return args[0].ToLowerInvariant() switch
+            {
+                "info" => await RunInfoAsync(services, cancellation.Token).ConfigureAwait(false),
+                "catalogue" or "catalog" =>
+                    await RunCatalogueAsync(services, cancellation.Token).ConfigureAwait(false),
+                "detect" => await RunDetectAsync(services, cancellation.Token).ConfigureAwait(false),
+                "games" => await RunGamesAsync(services, cancellation.Token).ConfigureAwait(false),
+                "profiles" => await RunProfilesAsync(services, cancellation.Token).ConfigureAwait(false),
+                "benchmark" => await RunBenchmarkStatusAsync(services, cancellation.Token).ConfigureAwait(false),
+                "autotune" => await RunAutoTunePlanAsync(services, cancellation.Token).ConfigureAwait(false),
+                "history" => await RunHistoryAsync(services, cancellation.Token).ConfigureAwait(false),
+                "recover" => await RunRecoverAsync(services, cancellation.Token).ConfigureAwait(false),
+                "rollback" => await RunRollbackAsync(services, args, cancellation.Token).ConfigureAwait(false),
+                "logs" => await RunExportLogsAsync(services, cancellation.Token).ConfigureAwait(false),
+                _ => UnknownCommand(args[0]),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine("Cancelled.");
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> RunInfoAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var provider = services.GetRequiredService<ISystemProfileProvider>();
+        SystemProfile profile = await provider.RefreshAsync(cancellationToken).ConfigureAwait(false);
+        CpuLayout layout = CpuTopologyAnalyzer.Analyze(profile.Cpu);
+
+        Console.WriteLine($"Fingerprint       {profile.Fingerprint.ShortId}");
+        Console.WriteLine($"Operating system  {profile.OperatingSystem.ProductName} " +
+                          $"{profile.OperatingSystem.DisplayVersion} " +
+                          $"(build {profile.OperatingSystem.BuildNumber}.{profile.OperatingSystem.UpdateBuildRevision})");
+        Console.WriteLine($"Machine           {profile.MachineKind}");
+        Console.WriteLine($"Processor         {profile.Cpu.BrandString}");
+        Console.WriteLine($"                  {profile.Cpu.PhysicalCoreCount} cores / " +
+                          $"{profile.Cpu.LogicalProcessorCount} threads, " +
+                          $"{profile.Cpu.Groups.Count} group(s), {profile.Cpu.NumaNodes.Count} NUMA node(s)");
+        Console.WriteLine($"Memory            {FormatBytes(profile.Memory.TotalPhysicalBytes)} installed, " +
+                          $"{FormatBytes(profile.Memory.AvailablePhysicalBytes)} available");
+
+        foreach (GpuDevice gpu in profile.Gpus)
+        {
+            Console.WriteLine($"Graphics          {gpu.Description} (driver {gpu.DriverVersion ?? "unknown"})");
+        }
+
+        foreach (DisplayDevice display in profile.Displays)
+        {
+            string warning = display.IsRunningBelowMaximumRefreshRate
+                ? $"  <-- supports {display.MaximumRefreshRateHzAtCurrentResolution} Hz"
+                : string.Empty;
+
+            Console.WriteLine($"Display           {display.FriendlyName ?? display.DeviceName}: " +
+                              $"{display.CurrentMode.Width}x{display.CurrentMode.Height} " +
+                              $"@ {display.CurrentMode.RefreshRateHz} Hz{warning}");
+        }
+
+        foreach (StorageDevice device in profile.StorageDevices)
+        {
+            Console.WriteLine($"Storage           {device.Model} " +
+                              $"({device.MediaType}, {device.BusType}, {FormatBytes(device.SizeBytes)})");
+        }
+
+        Console.WriteLine($"Power plan        {profile.Power.ActiveScheme.Name}");
+
+        if (layout.Notes.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Topology analysis:");
+            foreach (string note in layout.Notes)
+            {
+                Console.WriteLine($"  - {note}");
+            }
+        }
+
+        if (profile.ProbeFailures.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Probes that failed:");
+            foreach (KeyValuePair<string, string> failure in profile.ProbeFailures)
+            {
+                Console.WriteLine($"  - {failure.Key}: {failure.Value}");
+            }
+        }
+
+        IReadOnlyList<ProcessSnapshot>? processes = null;
+        var inspector = services.GetService<IProcessInspector>();
+        if (inspector is not null)
+        {
+            processes = await inspector.GetProcessesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        IReadOnlyList<SystemFinding> findings = SystemAdvisor.Analyze(profile, processes);
+
+        if (findings.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("What this product cannot fix for you:");
+            foreach (SystemFinding finding in findings)
+            {
+                Console.WriteLine($"  [{finding.Severity}] {finding.Title}");
+                Console.WriteLine($"      {finding.Detail}");
+
+                if (finding.Recommendation is not null)
+                {
+                    Console.WriteLine($"      -> {finding.Recommendation}");
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunCatalogueAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var registry = services.GetRequiredService<ITweakRegistry>();
+        var contextFactory = services.GetRequiredService<ITweakContextFactory>();
+
+        if (registry.All.Count == 0)
+        {
+            Console.WriteLine("This build contains no optimization modules yet.");
+            Console.WriteLine("The engine, journal and rollback pipeline are in place; modules arrive in Phase 3.");
+            return 0;
+        }
+
+        (TweakContext context, _) = await contextFactory
+            .CreateForKeysAsync("cli", Array.Empty<Abstractions.State.StateKey>(), cancellationToken)
+            .ConfigureAwait(false);
+
+        IReadOnlyList<CatalogueEntry> entries =
+            await registry.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+
+        foreach (CatalogueEntry entry in entries)
+        {
+            TweakDescriptor descriptor = entry.Tweak.Descriptor;
+            string status = entry.Compatibility.IsSupported ? "supported" : entry.Compatibility.Status.ToString();
+            Console.WriteLine($"{descriptor.Id,-44} {descriptor.Category,-12} {descriptor.Risk,-12} {status}");
+
+            if (!entry.Compatibility.IsSupported)
+            {
+                Console.WriteLine($"{string.Empty,-44} {entry.Compatibility.Reason}");
+            }
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunDetectAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var engine = services.GetRequiredService<IOptimizationEngine>();
+        IReadOnlyList<TweakRunResult> results = await engine.DetectAsync(cancellationToken).ConfigureAwait(false);
+
+        if (results.Count == 0)
+        {
+            Console.WriteLine("This build contains no optimization modules yet.");
+            return 0;
+        }
+
+        foreach (TweakRunResult result in results)
+        {
+            Console.WriteLine($"{result.TweakId,-44} {result.Observation?.State.ToString() ?? "n/a",-18} {result.Message}");
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunGamesAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var library = services.GetRequiredService<IGameLibrary>();
+        GameLibraryScan scan = await library.ScanAsync(cancellationToken).ConfigureAwait(false);
+
+        if (scan.Games.Count == 0)
+        {
+            Console.WriteLine("No installed games were found.");
+        }
+        else
+        {
+            Console.WriteLine($"{scan.Games.Count} installed game(s):");
+            foreach (GameInstallation game in scan.Games)
+            {
+                Console.WriteLine($"  {game.Name}");
+                Console.WriteLine($"      {game.Store}  {game.Id}");
+
+                if (game.InstallDirectory is not null)
+                {
+                    Console.WriteLine($"      {game.InstallDirectory}");
+                }
+            }
+        }
+
+        if (scan.FailedSources.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Stores that could not be read:");
+            foreach (KeyValuePair<string, string> failure in scan.FailedSources)
+            {
+                Console.WriteLine($"  - {failure.Key}: {failure.Value}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "GOG, EA, Ubisoft Connect and Battle.net keep their installed-game records in private " +
+            "databases whose formats are undocumented, so they are not scanned. Add those games by " +
+            "hand rather than relying on a scanner that breaks on the next client update.");
+
+        var detector = services.GetRequiredService<IGameDetector>();
+        IReadOnlyList<DetectedGame> running =
+            await detector.DetectRunningGamesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (running.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Running now:");
+            foreach (DetectedGame game in running)
+            {
+                Console.WriteLine(
+                    $"  {game.ExecutableName} (pid {game.ProcessId}) — {DescribeReason(game.Reason)}");
+            }
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunProfilesAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var profiles = services.GetRequiredService<IProfileService>();
+
+        foreach (OptimizationProfile profile in
+                 await profiles.GetProfilesAsync(cancellationToken).ConfigureAwait(false))
+        {
+            Console.WriteLine($"{profile.Name}  [{profile.Id}]");
+            Console.WriteLine(
+                $"      {profile.Kind}{(profile.IsBuiltIn ? ", built in" : string.Empty)}" +
+                $"{(profile.GameId is null ? string.Empty : $", bound to {profile.GameId}")}");
+
+            foreach (ProfileTweakSetting setting in profile.Tweaks.Where(setting => setting.Enabled))
+            {
+                Console.WriteLine($"        - {setting.TweakId}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "A profile is a list of modules to offer, not a promise about frames. Each module still " +
+            "checks your hardware and is skipped with a reason when it does not apply.");
+
+        return 0;
+    }
+
+    private static string DescribeReason(GameDetectionReason reason) => reason switch
+    {
+        GameDetectionReason.InstalledLibraryMatch => "its executable is in your library",
+        GameDetectionReason.StoreLibraryFolder =>
+            "it lives inside a game's install folder, which also matches launchers and crash handlers",
+        GameDetectionReason.UserDeclared => "you marked this executable as a game",
+        GameDetectionReason.DeclaredByProcess => "it asked Windows for the gaming quality of service",
+        _ => "no evidence",
+    };
+
+    private static async Task<int> RunBenchmarkStatusAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var lab = services.GetRequiredService<IBenchmarkLab>();
+        FrameCaptureStatus status = await lab.GetCaptureStatusAsync(cancellationToken).ConfigureAwait(false);
+
+        Console.WriteLine(status.CanCapture
+            ? "Frame time capture is available."
+            : "Frame time capture is NOT available.");
+        Console.WriteLine($"  {status.Detail}");
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Frame times come from the kernel graphics trace provider, which is the only documented " +
+            "way to observe another process's frames on Windows. Without it this product will not " +
+            "claim a frame rate change: resource counters alone cannot support one.");
+
+        return 0;
+    }
+
+    private static async Task<int> RunAutoTunePlanAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var registry = services.GetRequiredService<ITweakRegistry>();
+        var contextFactory = services.GetRequiredService<ITweakContextFactory>();
+
+        IReadOnlyList<AutoTuneCandidate> plan =
+            await AutoTunePlanner.PlanAsync(registry, contextFactory, cancellationToken).ConfigureAwait(false);
+
+        if (plan.Count == 0)
+        {
+            Console.WriteLine("Nothing on this machine is worth putting through a measured trial.");
+        }
+        else
+        {
+            Console.WriteLine($"{plan.Count} setting(s) would be trialled, one at a time:");
+            foreach (AutoTuneCandidate candidate in plan)
+            {
+                Console.WriteLine($"  {candidate.Description}  [{candidate.TweakId}]");
+            }
+        }
+
+        IReadOnlyList<ITweak> excluded = registry.All
+            .Where(tweak => tweak.Descriptor.BenchmarkRecommended && tweak.Descriptor.RequiresRestart)
+            .ToList();
+
+        if (excluded.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Worth measuring, but not in one sitting (they need a restart):");
+            foreach (ITweak tweak in excluded)
+            {
+                Console.WriteLine($"  {tweak.Descriptor.Name}  [{tweak.Descriptor.Id}]");
+            }
+        }
+
+        var profileProvider = services.GetRequiredService<ISystemProfileProvider>();
+        SystemProfile machine = await profileProvider.GetAsync(cancellationToken).ConfigureAwait(false);
+        var results = services.GetRequiredService<ITrialResultRepository>();
+
+        Console.WriteLine();
+        Console.WriteLine($"Measured results for this machine ({machine.Fingerprint.ShortId}):");
+
+        var anyResults = false;
+        foreach (GameInstallation game in
+                 (await services.GetRequiredService<IGameLibrary>()
+                     .GetAsync(cancellationToken).ConfigureAwait(false)).Games)
+        {
+            IReadOnlyList<TweakTrialResult> stored = await results
+                .GetResultsAsync(machine.Fingerprint.CompositeHash, game.Name, cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (TweakTrialResult result in stored)
+            {
+                anyResults = true;
+                Console.WriteLine($"  {game.Name}: {result.TweakId} -> {result.Decision}");
+                Console.WriteLine($"      {result.Rationale}");
+            }
+        }
+
+        if (!anyResults)
+        {
+            Console.WriteLine("  Nothing has been measured yet on this machine.");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Auto-tune changes one thing at a time and keeps it only when the measurement says it " +
+            "helped. A change that measures as no difference is undone: an unnecessary modification " +
+            "to your system is a cost even when it is free in frames.");
+
+        return 0;
+    }
+
+    private static async Task<int> RunHistoryAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var journal = services.GetRequiredService<ITransactionJournal>();
+        IReadOnlyList<OptimizationTransaction> transactions =
+            await journal.GetRecentTransactionsAsync(25, cancellationToken).ConfigureAwait(false);
+
+        if (transactions.Count == 0)
+        {
+            Console.WriteLine("This product has not changed anything on this machine.");
+            return 0;
+        }
+
+        foreach (OptimizationTransaction transaction in transactions)
+        {
+            Console.WriteLine(
+                $"{transaction.StartedAtUtc:u}  {transaction.Id}  {transaction.Status,-20} {transaction.Reason}");
+
+            foreach (TransactionStep step in transaction.Steps)
+            {
+                string rolledBack = step.RolledBack ? " (rolled back)" : string.Empty;
+                Console.WriteLine($"    {step.Ordinal}. {step.TweakId} -> {step.ApplyOutcome}{rolledBack}");
+            }
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> RunRecoverAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var recovery = services.GetRequiredService<ICrashRecoveryService>();
+        RecoveryReport report = await recovery.RecoverAsync(cancellationToken).ConfigureAwait(false);
+
+        Console.WriteLine(report.NothingToDo
+            ? "Nothing needed recovering."
+            : $"Recovered {report.RecoveredTransactionCount} transaction(s); " +
+              $"{report.FailedTransactionIds.Count} could not be restored.");
+
+        return report.FailedTransactionIds.Count == 0 ? 0 : 1;
+    }
+
+    private static async Task<int> RunRollbackAsync(
+        IServiceProvider services,
+        string[] args,
+        CancellationToken cancellationToken)
+    {
+        var rollback = services.GetRequiredService<IRollbackEngine>();
+        RollbackResult? result;
+
+        if (args.Length >= 3 && string.Equals(args[1], "--transaction", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Guid.TryParse(args[2], out Guid transactionId))
+            {
+                Console.Error.WriteLine($"'{args[2]}' is not a transaction id.");
+                return 2;
+            }
+
+            result = await rollback.RollbackTransactionAsync(transactionId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else if (args.Length >= 3 && string.Equals(args[1], "--tweak", StringComparison.OrdinalIgnoreCase))
+        {
+            result = await rollback.RollbackTweakAsync(args[2], cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            result = await rollback.RollbackLastAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (result is null)
+        {
+            Console.WriteLine("There is nothing applied by this product to roll back.");
+            return 0;
+        }
+
+        Console.WriteLine($"Restored {result.RestoredKeyCount} value(s) from transaction {result.TransactionId}.");
+
+        foreach (KeyValuePair<string, string> failure in result.Failures)
+        {
+            Console.Error.WriteLine($"  failed: {failure.Key}: {failure.Value}");
+        }
+
+        return result.Succeeded ? 0 : 1;
+    }
+
+    private static async Task<int> RunExportLogsAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var exporter = services.GetRequiredService<ISupportBundleExporter>();
+        string path = await exporter
+            .ExportAsync(Environment.CurrentDirectory, cancellationToken)
+            .ConfigureAwait(false);
+
+        Console.WriteLine($"Support bundle written to {path}");
+        return 0;
+    }
+
+    private static void PrintPolicy()
+    {
+        Console.WriteLine("Registry paths the privileged helper may write:");
+        foreach ((string prefix, string purpose) in PrivilegedOperationPolicy.DescribeWriteAllowList())
+        {
+            Console.WriteLine($"  {prefix}");
+            Console.WriteLine($"      {purpose}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Registry paths that are never written, whatever a module asks for:");
+        foreach ((string prefix, string reason) in PrivilegedOperationPolicy.DescribeDenyList())
+        {
+            Console.WriteLine($"  {prefix}");
+            Console.WriteLine($"      {reason}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Power settings the privileged helper may write (AC side only):");
+        foreach ((string subgroup, string setting, string purpose) in
+                 PrivilegedOperationPolicy.DescribePowerWriteAllowList())
+        {
+            Console.WriteLine($"  {subgroup}/{setting}");
+            Console.WriteLine($"      {purpose}");
+        }
+    }
+
+    private static int UnknownCommand(string command)
+    {
+        Console.Error.WriteLine($"Unknown command '{command}'.");
+        PrintUsage();
+        return 2;
+    }
+
+    private static bool IsHelp(string argument) =>
+        argument is "-h" or "--help" or "help" or "/?";
+
+    private static void PrintUsage()
+    {
+        Console.WriteLine("velocity <command>");
+        Console.WriteLine();
+        Console.WriteLine("  info                          Describe this machine and what the analyzer makes of it.");
+        Console.WriteLine("  catalogue                     List optimization modules and their compatibility.");
+        Console.WriteLine("  detect                        Report what each module observes, changing nothing.");
+        Console.WriteLine("  games                         List installed games and any running now.");
+        Console.WriteLine("  profiles                      List optimization profiles and what each one applies.");
+        Console.WriteLine("  benchmark                     Report whether frame time capture can run here.");
+        Console.WriteLine("  autotune                      Show what would be trialled and what has been measured.");
+        Console.WriteLine("  history                       Show what this product has changed on this machine.");
+        Console.WriteLine("  recover                       Roll back any transaction left in flight by a crash.");
+        Console.WriteLine("  rollback [--transaction <id> | --tweak <id>]");
+        Console.WriteLine("                                Restore captured values. Defaults to the last transaction.");
+        Console.WriteLine("  policy                        Print the privileged write allow and deny lists.");
+        Console.WriteLine("  logs                          Write a redacted support bundle to the current directory.");
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        int unit = 0;
+
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $"{value:0.##} {units[unit]}");
+    }
+}

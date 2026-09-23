@@ -1,0 +1,24 @@
+{
+  "solution": {
+    "path": "Velocity.sln",
+    "projects": [
+      "src\\Velocity.Abstractions\\Velocity.Abstractions.csproj",
+      "src\\Velocity.Diagnostics\\Velocity.Diagnostics.csproj",
+      "src\\Velocity.Data\\Velocity.Data.csproj",
+      "src\\Velocity.Core\\Velocity.Core.csproj",
+      "src\\Velocity.Ipc\\Velocity.Ipc.csproj",
+      "src\\Velocity.Platform.Windows\\Velocity.Platform.Windows.csproj",
+      "src\\Velocity.Helper\\Velocity.Helper.csproj",
+      "src\\Velocity.Presentation\\Velocity.Presentation.csproj",
+      "src\\Velocity.Composition\\Velocity.Composition.csproj",
+      "src\\Velocity.Tweaks\\Velocity.Tweaks.csproj",
+      "src\\Velocity.Cli\\Velocity.Cli.csproj",
+      "tests\\Velocity.TestSupport\\Velocity.TestSupport.csproj",
+      "tests\\Velocity.Core.Tests\\Velocity.Core.Tests.csproj",
+      "tests\\Velocity.Data.Tests\\Velocity.Data.Tests.csproj",
+      "tests\\Velocity.Ipc.Tests\\Velocity.Ipc.Tests.csproj",
+      "tests\\Velocity.Presentation.Tests\\Velocity.Presentation.Tests.csproj",
+      "tests\\Velocity.Tweaks.Tests\\Velocity.Tweaks.Tests.csproj"
+    ]
+  }
+}

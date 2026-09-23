@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkPortable)</TargetFramework>
+    <RootNamespace>Velocity.Presentation</RootNamespace>
+    <Description>UI framework independent MVVM infrastructure and view models. Contains no XAML and no WinUI reference, so every view model is unit testable.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\Velocity.Core\Velocity.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

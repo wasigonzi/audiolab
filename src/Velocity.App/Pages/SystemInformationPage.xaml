@@ -1,0 +1,77 @@
+<Page
+    x:Class="Velocity.App.Pages.SystemInformationPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="20" MaxWidth="1100">
+
+            <StackPanel Spacing="4">
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="System" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding FingerprintId}" />
+            </StackPanel>
+
+            <Button Command="{Binding LoadCommand}" CommandParameter="True" Content="Re-read hardware" />
+
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource GlassCardStyle}" Margin="0,0,0,16">
+                            <StackPanel Spacing="10">
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{Binding Title}" />
+                                <ItemsControl ItemsSource="{Binding Facts}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,4" ColumnSpacing="16">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="220" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    Style="{StaticResource CaptionStyle}"
+                                                    Text="{Binding Label}" />
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Style="{StaticResource BodyStyle}" Text="{Binding Value}" />
+                                                    <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding Detail}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Style="{StaticResource SubtleCardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="What the analyzer makes of this processor" />
+                    <ItemsControl ItemsSource="{Binding CpuNotes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource BodyStyle}" Margin="0,3" Text="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Detection failures are shown, not hidden. -->
+            <Border Style="{StaticResource SubtleCardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Detection problems" />
+                    <ItemsControl ItemsSource="{Binding ProbeFailures}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource BodyStyle}" Margin="0,3" Text="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

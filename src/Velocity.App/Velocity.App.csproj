@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The WinUI head. It contains XAML, converters and a dispatcher adapter, and nothing else:
+    every decision it renders is made by a view model in Velocity.Presentation, which is unit
+    tested without any UI framework present.
+
+    This project can only be built on Windows: the WinUI XAML compiler is a Windows executable.
+    Velocity.Portable.slnf exists so that non-Windows agents can still build and test everything
+    else.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(TargetFrameworkWindows)</TargetFramework>
+    <SupportedOSPlatformVersion>$(SupportedOSPlatformVersionWindows)</SupportedOSPlatformVersion>
+    <RootNamespace>Velocity.App</RootNamespace>
+    <AssemblyName>Velocity</AssemblyName>
+    <Description>Velocity desktop application.</Description>
+    <UseWinUI>true</UseWinUI>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- Unpackaged: the product installs with an MSI and runs as an ordinary desktop application. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Generated XAML partials do not carry XML documentation. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\Velocity.Composition\Velocity.Composition.csproj" />
+    <ProjectReference Include="..\Velocity.Core\Velocity.Core.csproj" />
+    <ProjectReference Include="..\Velocity.Presentation\Velocity.Presentation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+  </ItemGroup>
+
+</Project>

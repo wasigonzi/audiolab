@@ -1,0 +1,146 @@
+<Page
+    x:Class="Velocity.App.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="20" MaxWidth="1280">
+
+            <StackPanel Spacing="4">
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="Dashboard" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding MachineSummary}" />
+            </StackPanel>
+
+            <!-- Live telemetry -->
+            <ItemsRepeater ItemsSource="{Binding Cards}">
+                <ItemsRepeater.Layout>
+                    <UniformGridLayout
+                        MinItemWidth="220"
+                        MinItemHeight="130"
+                        MinColumnSpacing="16"
+                        MinRowSpacing="16"
+                        ItemsStretch="Fill" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource GlassCardStyle}">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon
+                                        FontSize="14"
+                                        Foreground="{StaticResource TextSecondaryBrush}"
+                                        Glyph="{Binding Glyph}" />
+                                    <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding Title}" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding Value}" />
+
+                                <ProgressBar
+                                    Maximum="100"
+                                    Foreground="{StaticResource AccentBrush}"
+                                    Value="{Binding Fraction, Converter={StaticResource FractionToPercentConverter}}"
+                                    Visibility="{Binding IsUnavailable, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}" />
+
+                                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding Detail}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+
+            <!-- Per core strip -->
+            <Border Style="{StaticResource SubtleCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Per core utilization" />
+                    <ItemsRepeater ItemsSource="{Binding PerCoreUtilization}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout
+                                MinItemWidth="26"
+                                MinItemHeight="64"
+                                MinColumnSpacing="6"
+                                MinRowSpacing="6" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                                <!--
+                                    Drawn rather than built from a ProgressBar: WinUI's ProgressBar
+                                    is horizontal only, and rotating one fights its layout. A track
+                                    with a bottom-anchored fill is what a per-core meter actually is.
+                                -->
+                                <Border
+                                    Height="64"
+                                    Width="14"
+                                    CornerRadius="7"
+                                    Background="{StaticResource StrokeBrush}">
+                                    <Rectangle
+                                        VerticalAlignment="Bottom"
+                                        RadiusX="7"
+                                        RadiusY="7"
+                                        Fill="{StaticResource AccentBrush}"
+                                        Height="{Binding Converter={StaticResource FractionToHeightConverter}, ConverterParameter=64}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </Border>
+
+            <!-- The one button -->
+            <Border Style="{StaticResource GlassCardStyle}">
+                <StackPanel Spacing="16">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="{Binding OptimizationState}" />
+                            <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding ActiveGame}" />
+                        </StackPanel>
+
+                        <ComboBox
+                            Grid.Column="1"
+                            MinWidth="170"
+                            VerticalAlignment="Center"
+                            ItemsSource="{Binding AvailableProfiles}"
+                            SelectedItem="{Binding SelectedProfile, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Button
+                        Style="{StaticResource PrimaryActionStyle}"
+                        Command="{Binding OptimizeNowCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}"
+                        Content="OPTIMIZE NOW" />
+
+                    <HyperlinkButton
+                        HorizontalAlignment="Center"
+                        Command="{Binding RestoreCommand}"
+                        Content="Restore the last optimization" />
+
+                    <ProgressRing
+                        IsActive="{Binding IsBusy}"
+                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                    <InfoBar
+                        IsOpen="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"
+                        IsClosable="False"
+                        Severity="Error"
+                        Message="{Binding ErrorMessage}" />
+
+                    <ItemsControl ItemsSource="{Binding LastRunSummary}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource CaptionStyle}" Text="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,55 @@
+<Project>
+
+  <!--
+    Shared build configuration for the entire Velocity solution.
+
+    Design notes:
+
+    * Every project is nullable-enabled and warnings-as-errors. An optimizer that
+      manipulates OS state must not ship with sloppy null handling.
+    * Only the projects that genuinely need Windows APIs use a Windows TFM. Engine,
+      data, IPC and presentation logic stay on the portable TFM so they can be unit
+      tested on any CI agent (including Linux containers).
+    * EnableWindowsTargeting lets the Windows-TFM libraries *compile* on non-Windows
+      build agents. They still cannot execute there; see docs/09-phase1-status.md.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworkPortable>net10.0</TargetFrameworkPortable>
+    <TargetFrameworkWindows>net10.0-windows10.0.26100.0</TargetFrameworkWindows>
+    <SupportedOSPlatformVersionWindows>10.0.19041.0</SupportedOSPlatformVersionWindows>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NoWarn>$(NoWarn);CA1848;CA1031;CA2007</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>Velocity Gaming Optimizer</Product>
+    <Company>Velocity Systems</Company>
+    <Authors>Velocity Systems</Authors>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Signed release builds: see docs/10-security-model.md. Enabled by CI, not locally. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+</Project>

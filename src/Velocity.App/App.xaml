@@ -1,0 +1,27 @@
+<Application
+    x:Class="Velocity.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Velocity.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="ms-appx:///Styles/Glass.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--
+                Converters are declared here rather than per page. A StaticResource reference is
+                resolved at run time, so a missing converter compiles cleanly and then throws the
+                moment the page is shown; keeping the single declaration next to the merged
+                dictionaries is what stops that going unnoticed again.
+            -->
+            <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <local:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+            <local:FractionToPercentConverter x:Key="FractionToPercentConverter" />
+            <local:FractionToHeightConverter x:Key="FractionToHeightConverter" />
+            <local:RiskToBrushKeyConverter x:Key="RiskToBrushKeyConverter" />
+            <local:CompatibilityToTextConverter x:Key="CompatibilityToTextConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

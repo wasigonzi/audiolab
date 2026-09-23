@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkWindows)</TargetFramework>
+    <SupportedOSPlatformVersion>$(SupportedOSPlatformVersionWindows)</SupportedOSPlatformVersion>
+    <RootNamespace>Velocity.Composition</RootNamespace>
+    <Description>Composition root shared by the desktop application and the command line host, including the enforced startup order: migrate, then recover, then run.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Velocity.Abstractions\Velocity.Abstractions.csproj" />
+    <ProjectReference Include="..\Velocity.Core\Velocity.Core.csproj" />
+    <ProjectReference Include="..\Velocity.Data\Velocity.Data.csproj" />
+    <ProjectReference Include="..\Velocity.Diagnostics\Velocity.Diagnostics.csproj" />
+    <ProjectReference Include="..\Velocity.Platform.Windows\Velocity.Platform.Windows.csproj" />
+    <ProjectReference Include="..\Velocity.Presentation\Velocity.Presentation.csproj" />
+    <ProjectReference Include="..\Velocity.Tweaks\Velocity.Tweaks.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>
