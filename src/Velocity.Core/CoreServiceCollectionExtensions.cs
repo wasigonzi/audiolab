@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.State;
 using Velocity.Core.Auditing;
+using Velocity.Core.AutoTune;
 using Velocity.Core.Benchmarking;
 using Velocity.Core.Games;
 using Velocity.Core.Hardware;
@@ -72,6 +73,7 @@ public static class CoreServiceCollectionExtensions
             _ => new UnavailableFrameTimeSource());
         services.TryAddSingleton<FrameTimeRecorder>();
         services.TryAddSingleton<IBenchmarkLab, BenchmarkLab>();
+        services.TryAddSingleton<IAutoTuneEngine, AutoTuneEngine>();
 
         return services;
     }

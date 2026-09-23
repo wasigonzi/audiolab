@@ -29,6 +29,7 @@ public static class DataServiceCollectionExtensions
         services.TryAddSingleton<IProfileRepository, ProfileRepository>();
         services.TryAddSingleton<IBenchmarkRepository, BenchmarkRepository>();
         services.TryAddSingleton<ISettingsRepository, SettingsRepository>();
+        services.TryAddSingleton<ITrialResultRepository, TrialResultRepository>();
 
         return services;
     }

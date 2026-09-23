@@ -15,6 +15,7 @@ using Velocity.Abstractions.Profiles;
 using Velocity.Abstractions.Telemetry;
 using Velocity.Composition;
 using Velocity.Core.Advisory;
+using Velocity.Core.AutoTune;
 using Velocity.Core.Benchmarking;
 using Velocity.Core.Hardware;
 using Velocity.Core.Profiles;
@@ -79,6 +80,7 @@ public static class Program
                 "games" => await RunGamesAsync(services, cancellation.Token).ConfigureAwait(false),
                 "profiles" => await RunProfilesAsync(services, cancellation.Token).ConfigureAwait(false),
                 "benchmark" => await RunBenchmarkStatusAsync(services, cancellation.Token).ConfigureAwait(false),
+                "autotune" => await RunAutoTunePlanAsync(services, cancellation.Token).ConfigureAwait(false),
                 "history" => await RunHistoryAsync(services, cancellation.Token).ConfigureAwait(false),
                 "recover" => await RunRecoverAsync(services, cancellation.Token).ConfigureAwait(false),
                 "rollback" => await RunRollbackAsync(services, args, cancellation.Token).ConfigureAwait(false),
@@ -360,6 +362,81 @@ public static class Program
         return 0;
     }
 
+    private static async Task<int> RunAutoTunePlanAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var registry = services.GetRequiredService<ITweakRegistry>();
+        var contextFactory = services.GetRequiredService<ITweakContextFactory>();
+
+        IReadOnlyList<AutoTuneCandidate> plan =
+            await AutoTunePlanner.PlanAsync(registry, contextFactory, cancellationToken).ConfigureAwait(false);
+
+        if (plan.Count == 0)
+        {
+            Console.WriteLine("Nothing on this machine is worth putting through a measured trial.");
+        }
+        else
+        {
+            Console.WriteLine($"{plan.Count} setting(s) would be trialled, one at a time:");
+            foreach (AutoTuneCandidate candidate in plan)
+            {
+                Console.WriteLine($"  {candidate.Description}  [{candidate.TweakId}]");
+            }
+        }
+
+        IReadOnlyList<ITweak> excluded = registry.All
+            .Where(tweak => tweak.Descriptor.BenchmarkRecommended && tweak.Descriptor.RequiresRestart)
+            .ToList();
+
+        if (excluded.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Worth measuring, but not in one sitting (they need a restart):");
+            foreach (ITweak tweak in excluded)
+            {
+                Console.WriteLine($"  {tweak.Descriptor.Name}  [{tweak.Descriptor.Id}]");
+            }
+        }
+
+        var profileProvider = services.GetRequiredService<ISystemProfileProvider>();
+        SystemProfile machine = await profileProvider.GetAsync(cancellationToken).ConfigureAwait(false);
+        var results = services.GetRequiredService<ITrialResultRepository>();
+
+        Console.WriteLine();
+        Console.WriteLine($"Measured results for this machine ({machine.Fingerprint.ShortId}):");
+
+        var anyResults = false;
+        foreach (GameInstallation game in
+                 (await services.GetRequiredService<IGameLibrary>()
+                     .GetAsync(cancellationToken).ConfigureAwait(false)).Games)
+        {
+            IReadOnlyList<TweakTrialResult> stored = await results
+                .GetResultsAsync(machine.Fingerprint.CompositeHash, game.Name, cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (TweakTrialResult result in stored)
+            {
+                anyResults = true;
+                Console.WriteLine($"  {game.Name}: {result.TweakId} -> {result.Decision}");
+                Console.WriteLine($"      {result.Rationale}");
+            }
+        }
+
+        if (!anyResults)
+        {
+            Console.WriteLine("  Nothing has been measured yet on this machine.");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Auto-tune changes one thing at a time and keeps it only when the measurement says it " +
+            "helped. A change that measures as no difference is undone: an unnecessary modification " +
+            "to your system is a cost even when it is free in frames.");
+
+        return 0;
+    }
+
     private static async Task<int> RunHistoryAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var journal = services.GetRequiredService<ITransactionJournal>();
@@ -502,6 +579,7 @@ public static class Program
         Console.WriteLine("  games                         List installed games and any running now.");
         Console.WriteLine("  profiles                      List optimization profiles and what each one applies.");
         Console.WriteLine("  benchmark                     Report whether frame time capture can run here.");
+        Console.WriteLine("  autotune                      Show what would be trialled and what has been measured.");
         Console.WriteLine("  history                       Show what this product has changed on this machine.");
         Console.WriteLine("  recover                       Roll back any transaction left in flight by a crash.");
         Console.WriteLine("  rollback [--transaction <id> | --tweak <id>]");
