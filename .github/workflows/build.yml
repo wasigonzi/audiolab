@@ -51,8 +51,18 @@ jobs:
         run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- info
       - name: List the catalogue and its compatibility on this machine
         run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- catalogue
+      # This step is a regression guard, not just a smoke check. The core package registers a
+      # portable "this platform cannot capture frames" fallback, and for a while it shadowed the
+      # real ETW source in the composed product. The only place that is visible is here, on a
+      # machine where the Windows implementation is supposed to win.
       - name: Report whether frame time capture can run here
-        run: dotnet run --project src/Velocity.Cli --configuration Release --no-build -- benchmark
+        run: |
+          $output = dotnet run --project src/Velocity.Cli --configuration Release --no-build -- benchmark | Out-String
+          Write-Host $output
+          if ($output -match 'no frame time capture') {
+            Write-Error "The portable fallback frame time source is registered on Windows. The ETW source should have replaced it."
+            exit 1
+          }
 
       # The runner is the only machine in this project's life that can produce a real Windows
       # build, so it keeps one. These are unsigned and unpackaged: something to run on a test

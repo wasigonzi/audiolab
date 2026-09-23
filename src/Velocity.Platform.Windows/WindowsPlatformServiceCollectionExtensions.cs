@@ -103,7 +103,11 @@ public static class WindowsPlatformServiceCollectionExtensions
             provider.GetRequiredService<IPowerConfigurationController>(),
             provider.GetRequiredService<ILogger<PowerStateProvider>>()));
 
-        services.TryAddSingleton<IFrameTimeSource, EtwFrameTimeSource>();
+        // Replace rather than TryAdd. The core package registers a portable fallback that reports
+        // "this platform cannot capture frames", and it is registered first, so a TryAdd here was
+        // a no-op and the real ETW source never ran in the composed product. Replace makes the
+        // platform authoritative whatever order the packages are added in.
+        services.Replace(ServiceDescriptor.Singleton<IFrameTimeSource, EtwFrameTimeSource>());
 
         services.TryAddSingleton<IGameFileSystem, WindowsGameFileSystem>();
         services.TryAddSingleton<IStoreLocator, WindowsStoreLocator>();
