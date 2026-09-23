@@ -12,8 +12,10 @@ using Velocity.Abstractions.Transactions;
 using Velocity.Abstractions.Tweaks;
 using Velocity.Abstractions.Games;
 using Velocity.Abstractions.Profiles;
+using Velocity.Abstractions.Telemetry;
 using Velocity.Composition;
 using Velocity.Core.Advisory;
+using Velocity.Core.Benchmarking;
 using Velocity.Core.Hardware;
 using Velocity.Core.Profiles;
 using Velocity.Core.Transactions;
@@ -76,6 +78,7 @@ public static class Program
                 "detect" => await RunDetectAsync(services, cancellation.Token).ConfigureAwait(false),
                 "games" => await RunGamesAsync(services, cancellation.Token).ConfigureAwait(false),
                 "profiles" => await RunProfilesAsync(services, cancellation.Token).ConfigureAwait(false),
+                "benchmark" => await RunBenchmarkStatusAsync(services, cancellation.Token).ConfigureAwait(false),
                 "history" => await RunHistoryAsync(services, cancellation.Token).ConfigureAwait(false),
                 "recover" => await RunRecoverAsync(services, cancellation.Token).ConfigureAwait(false),
                 "rollback" => await RunRollbackAsync(services, args, cancellation.Token).ConfigureAwait(false),
@@ -336,6 +339,27 @@ public static class Program
         _ => "no evidence",
     };
 
+    private static async Task<int> RunBenchmarkStatusAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var lab = services.GetRequiredService<IBenchmarkLab>();
+        FrameCaptureStatus status = await lab.GetCaptureStatusAsync(cancellationToken).ConfigureAwait(false);
+
+        Console.WriteLine(status.CanCapture
+            ? "Frame time capture is available."
+            : "Frame time capture is NOT available.");
+        Console.WriteLine($"  {status.Detail}");
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Frame times come from the kernel graphics trace provider, which is the only documented " +
+            "way to observe another process's frames on Windows. Without it this product will not " +
+            "claim a frame rate change: resource counters alone cannot support one.");
+
+        return 0;
+    }
+
     private static async Task<int> RunHistoryAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var journal = services.GetRequiredService<ITransactionJournal>();
@@ -477,6 +501,7 @@ public static class Program
         Console.WriteLine("  detect                        Report what each module observes, changing nothing.");
         Console.WriteLine("  games                         List installed games and any running now.");
         Console.WriteLine("  profiles                      List optimization profiles and what each one applies.");
+        Console.WriteLine("  benchmark                     Report whether frame time capture can run here.");
         Console.WriteLine("  history                       Show what this product has changed on this machine.");
         Console.WriteLine("  recover                       Roll back any transaction left in flight by a crash.");
         Console.WriteLine("  rollback [--transaction <id> | --tweak <id>]");

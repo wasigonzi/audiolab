@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Velocity.Abstractions.Hardware;
 using Velocity.Abstractions.State;
 using Velocity.Core.Auditing;
+using Velocity.Core.Benchmarking;
 using Velocity.Core.Games;
 using Velocity.Core.Hardware;
 using Velocity.Core.Network;
@@ -63,6 +64,14 @@ public static class CoreServiceCollectionExtensions
         services.TryAddSingleton<Abstractions.Games.IGameDetector, GameDetector>();
         services.TryAddSingleton<GamingSessionOptions>();
         services.TryAddSingleton<IGamingSessionManager, GamingSessionManager>();
+
+        // The platform package replaces this with a real capture source where one exists. Left as
+        // is, the Benchmark Lab reports that frames cannot be measured rather than comparing
+        // resource counters and calling the result a frame rate change.
+        services.TryAddSingleton<Abstractions.Telemetry.IFrameTimeSource>(
+            _ => new UnavailableFrameTimeSource());
+        services.TryAddSingleton<FrameTimeRecorder>();
+        services.TryAddSingleton<IBenchmarkLab, BenchmarkLab>();
 
         return services;
     }

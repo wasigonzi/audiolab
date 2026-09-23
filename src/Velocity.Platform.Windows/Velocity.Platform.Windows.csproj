@@ -21,6 +21,7 @@
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
     <PackageReference Include="System.Management" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
   </ItemGroup>
 
 </Project>

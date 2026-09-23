@@ -103,6 +103,8 @@ public static class WindowsPlatformServiceCollectionExtensions
             provider.GetRequiredService<IPowerConfigurationController>(),
             provider.GetRequiredService<ILogger<PowerStateProvider>>()));
 
+        services.TryAddSingleton<IFrameTimeSource, EtwFrameTimeSource>();
+
         services.TryAddSingleton<IGameFileSystem, WindowsGameFileSystem>();
         services.TryAddSingleton<IStoreLocator, WindowsStoreLocator>();
         services.TryAddSingleton<IGameLauncher, WindowsGameLauncher>();

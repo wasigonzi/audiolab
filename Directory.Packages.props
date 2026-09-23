@@ -34,6 +34,9 @@
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="10.0.12" />
     <PackageVersion Include="System.Management" Version="10.0.12" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.12" />
+    <!-- Frame time capture. The DxgKrnl present events are the only documented way to observe
+         another process's frame times on Windows, and this is the supported client for them. -->
+    <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.6" />
 
     <!-- Test -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
